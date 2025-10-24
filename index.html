@@ -230,7 +230,7 @@
             </div>
 
             <div class="section">
-                <div class="section-title">Top Movers (Oct 2025)</div>
+                <div class="section-title">Top Movers (Oct 24, 2025)</div>
                 <div id="topMovers"></div>
             </div>
 
@@ -266,45 +266,49 @@
         import * as THREE from 'three';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-        // Market Data
+        // Market Data (Updated: October 24, 2025)
         const marketData = {
             us: {
                 indices: [
-                    { name: 'S&P 500', value: 6746, change: 0.69, color: '#00CED1' },
-                    { name: 'NASDAQ', value: 22966, change: 0.99, color: '#1E90FF' },
-                    { name: 'DOW JONES', value: 44772, change: 0.70, color: '#4169E1' }
+                    { name: 'S&P 500', value: 6738.44, change: 0.58, color: '#00CED1' },
+                    { name: 'NASDAQ', value: 22941.80, change: 0.89, color: '#1E90FF' },
+                    { name: 'DOW JONES', value: 46734.61, change: 0.31, color: '#4169E1' }
                 ],
                 topMovers: [
-                    { name: 'AMD', change: 43.06 },
-                    { name: 'JB Hunt', change: 26.62 },
-                    { name: 'Micron', change: 19.92 },
-                    { name: 'Intuitive Surgical', change: 17.90 },
-                    { name: 'Thermo Fisher', change: 16.47 }
+                    { name: 'Iris Energy (IREN)', change: 15.8 },
+                    { name: 'Robinhood (HOOD)', change: 12.4 },
+                    { name: 'Hims & Hers (HIMS)', change: 11.2 },
+                    { name: 'Palantir (PLTR)', change: 8.9 },
+                    { name: 'D-Wave (QBTS)', change: 7.5 }
                 ],
                 ytdTop: [
-                    { name: 'Palantir (PLTR)', change: 107.2 },
-                    { name: 'Newmont (NEM)', change: 99.9 },
-                    { name: 'Seagate (STX)', change: 94.0 },
-                    { name: 'GE Vernova (GEV)', change: 86.4 },
-                    { name: 'Western Digital (WDC)', change: 78.3 }
+                    { name: 'Iris Energy (IREN)', change: 293.0 },
+                    { name: 'Nebius Group (NBIS)', change: 259.0 },
+                    { name: 'Robinhood (HOOD)', change: 235.0 },
+                    { name: 'D-Wave Quantum (QBTS)', change: 220.0 },
+                    { name: 'Jumia Tech (JMIA)', change: 204.0 },
+                    { name: 'Palantir (PLTR)', change: 107.21 },
+                    { name: 'Newmont (NEM)', change: 102.02 }
                 ]
             },
             kr: {
                 indices: [
-                    { name: 'KOSPI', value: 3823, change: 2.01, color: '#9370DB' },
-                    { name: 'KOSDAQ', value: 872.50, change: -0.37, color: '#BA55D3' }
+                    { name: 'KOSPI', value: 3929, change: 2.16, color: '#9370DB' },
+                    { name: 'KOSDAQ', value: 879.15, change: 0.76, color: '#BA55D3' }
                 ],
                 topMovers: [
-                    { name: '삼성전자', change: -0.61, value: '97,500원' },
-                    { name: 'SK하이닉스', change: -1.34, value: '479,000원' },
-                    { name: '한국전력', change: 12.5, value: '턴어라운드' },
-                    { name: '효성중공업', change: 8.3, value: '전력장비' }
+                    { name: 'SK하이닉스', change: 3.8, value: 'AI 반도체' },
+                    { name: '삼성전자', change: 2.4, value: 'HBM 수주' },
+                    { name: 'HD현대일렉트릭', change: 5.2, value: '전력장비' },
+                    { name: 'LS ELECTRIC', change: 4.1, value: '전력인프라' },
+                    { name: '삼성SDI', change: 3.3, value: '배터리' }
                 ],
                 ytdTop: [
-                    { name: 'HD현대일렉트릭', change: 156.2 },
-                    { name: 'LS ELECTRIC', change: 98.7 },
-                    { name: 'SK하이닉스', change: 85.4 },
-                    { name: '삼성SDI', change: 62.1 }
+                    { name: 'SK하이닉스', change: 145.0 },
+                    { name: 'HD현대일렉트릭', change: 98.0 },
+                    { name: 'LS ELECTRIC', change: 87.0 },
+                    { name: '삼성SDI', change: 62.0 },
+                    { name: '삼성전자', change: 45.0 }
                 ]
             }
         };
@@ -427,17 +431,19 @@
             group.userData = { ...indexData, id, type: 'nebula' };
 
             // Nebula cloud (particle system)
-            const particleCount = 3000;
+            const particleCount = 5000; // Increased for denser nebula
             const geometry = new THREE.BufferGeometry();
             const positions = [];
             const colors = [];
             const sizes = [];
 
             const color = new THREE.Color(indexData.color);
-            const baseSize = 15 * (1 + Math.abs(indexData.change) / 10);
+            const baseSize = 18 * (1 + Math.abs(indexData.change) / 8); // Larger nebula
 
             for (let i = 0; i < particleCount; i++) {
-                const radius = Math.random() * baseSize;
+                // Create layered spherical distribution for nebula effect
+                const layer = Math.random();
+                const radius = Math.pow(Math.random(), 0.7) * baseSize * (0.5 + layer * 0.5);
                 const theta = Math.random() * Math.PI * 2;
                 const phi = Math.random() * Math.PI;
 
@@ -447,50 +453,64 @@
                     radius * Math.cos(phi)
                 );
 
-                // Color variation
+                // Enhanced color variation with gradient
                 const colorVariation = color.clone();
-                colorVariation.offsetHSL(0, 0, Math.random() * 0.3 - 0.15);
+                colorVariation.offsetHSL(
+                    (Math.random() - 0.5) * 0.1,
+                    (Math.random() - 0.5) * 0.3,
+                    (Math.random() - 0.5) * 0.4 + layer * 0.2
+                );
                 colors.push(colorVariation.r, colorVariation.g, colorVariation.b);
 
-                sizes.push(Math.random() * 2 + 0.5);
+                sizes.push(Math.random() * 3 + 0.3);
             }
 
             geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
             geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
             geometry.setAttribute('size', new THREE.Float32BufferAttribute(sizes, 1));
 
-            // Shader material for glow effect
+            // Enhanced shader material for glow effect
             const material = new THREE.ShaderMaterial({
                 uniforms: {
                     time: { value: 0 },
-                    pulseIntensity: { value: Math.abs(indexData.change) / 2 }
+                    pulseIntensity: { value: Math.abs(indexData.change) / 1.5 }
                 },
                 vertexShader: `
                     attribute float size;
                     attribute vec3 color;
                     varying vec3 vColor;
+                    varying float vAlpha;
                     uniform float time;
                     uniform float pulseIntensity;
 
                     void main() {
                         vColor = color;
                         vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-                        float pulse = 1.0 + sin(time * 2.0 + length(position) * 0.1) * pulseIntensity * 0.3;
-                        gl_PointSize = size * pulse * (300.0 / -mvPosition.z);
+
+                        // Enhanced pulsing wave effect
+                        float wave1 = sin(time * 2.0 + length(position) * 0.15) * 0.3;
+                        float wave2 = sin(time * 3.0 - length(position) * 0.08) * 0.2;
+                        float pulse = 1.0 + (wave1 + wave2) * pulseIntensity;
+
+                        // Depth-based alpha for nebula depth
+                        vAlpha = 1.0 - (length(position) / 20.0) * 0.3;
+
+                        gl_PointSize = size * pulse * (350.0 / -mvPosition.z);
                         gl_Position = projectionMatrix * mvPosition;
                     }
                 `,
                 fragmentShader: `
                     varying vec3 vColor;
+                    varying float vAlpha;
 
                     void main() {
                         float dist = length(gl_PointCoord - vec2(0.5));
                         if (dist > 0.5) discard;
 
                         float alpha = 1.0 - (dist * 2.0);
-                        alpha = pow(alpha, 2.0);
+                        alpha = pow(alpha, 1.5);
 
-                        gl_FragColor = vec4(vColor, alpha * 0.6);
+                        gl_FragColor = vec4(vColor, alpha * vAlpha * 0.7);
                     }
                 `,
                 transparent: true,
@@ -502,31 +522,46 @@
             group.add(particles);
             group.userData.particles = particles;
 
-            // Core glow
-            const coreGeometry = new THREE.SphereGeometry(baseSize * 0.3, 32, 32);
+            // Enhanced core glow with multiple layers
+            const coreGeometry = new THREE.SphereGeometry(baseSize * 0.25, 32, 32);
             const coreMaterial = new THREE.MeshBasicMaterial({
                 color: indexData.color,
                 transparent: true,
-                opacity: 0.3,
+                opacity: 0.4,
                 blending: THREE.AdditiveBlending
             });
             const core = new THREE.Mesh(coreGeometry, coreMaterial);
             group.add(core);
             group.userData.core = core;
 
-            // Wave rings
-            const ringGeometry = new THREE.RingGeometry(baseSize * 0.5, baseSize * 0.52, 64);
-            const ringMaterial = new THREE.MeshBasicMaterial({
+            // Outer glow sphere
+            const glowGeometry = new THREE.SphereGeometry(baseSize * 0.35, 32, 32);
+            const glowMaterial = new THREE.MeshBasicMaterial({
                 color: indexData.color,
                 transparent: true,
-                opacity: 0.5,
-                side: THREE.DoubleSide,
+                opacity: 0.15,
                 blending: THREE.AdditiveBlending
             });
-            const ring = new THREE.Mesh(ringGeometry, ringMaterial);
-            ring.rotation.x = Math.PI / 2;
-            group.add(ring);
-            group.userData.ring = ring;
+            const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+            group.add(glow);
+            group.userData.glow = glow;
+
+            // Multiple wave rings for enhanced wave effect
+            group.userData.rings = [];
+            for (let i = 0; i < 3; i++) {
+                const ringGeometry = new THREE.RingGeometry(baseSize * 0.5, baseSize * 0.52, 64);
+                const ringMaterial = new THREE.MeshBasicMaterial({
+                    color: indexData.color,
+                    transparent: true,
+                    opacity: 0.6,
+                    side: THREE.DoubleSide,
+                    blending: THREE.AdditiveBlending
+                });
+                const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+                ring.rotation.x = Math.PI / 2;
+                group.add(ring);
+                group.userData.rings.push({ mesh: ring, offset: i * 0.33 });
+            }
 
             scene.add(group);
             return group;
@@ -553,41 +588,78 @@
 
             const group = new THREE.Group();
 
-            // Star appearance
-            const size = 0.3 + Math.abs(stockData.change) / 50;
-            const geometry = new THREE.SphereGeometry(size, 16, 16);
+            // Star appearance - size based on change magnitude
+            const changeAbs = Math.abs(stockData.change);
+            const size = 0.4 + changeAbs / 40;
+            const geometry = new THREE.SphereGeometry(size, 20, 20);
 
+            // Enhanced color scheme
             let color;
             if (stockData.change > 0) {
-                color = new THREE.Color().setHSL(0.33, 1, 0.5 + stockData.change / 200);
+                // Green to yellow-green gradient based on performance
+                const hue = 0.25 + Math.min(changeAbs / 500, 0.15);
+                const lightness = 0.5 + Math.min(changeAbs / 400, 0.2);
+                color = new THREE.Color().setHSL(hue, 1, lightness);
             } else {
-                color = new THREE.Color().setHSL(0, 1, 0.5);
+                // Red to orange gradient for negative
+                const hue = 0.0 + Math.min(changeAbs / 300, 0.08);
+                color = new THREE.Color().setHSL(hue, 1, 0.5);
             }
 
             const material = new THREE.MeshBasicMaterial({
                 color: color,
                 transparent: true,
-                opacity: 0.9
+                opacity: 0.95
             });
 
             const sphere = new THREE.Mesh(geometry, material);
             group.add(sphere);
 
-            // Glow effect
-            const glowGeometry = new THREE.SphereGeometry(size * 1.5, 16, 16);
-            const glowMaterial = new THREE.MeshBasicMaterial({
+            // Enhanced multi-layer glow effect
+            const glowGeometry1 = new THREE.SphereGeometry(size * 1.8, 16, 16);
+            const glowMaterial1 = new THREE.MeshBasicMaterial({
                 color: color,
                 transparent: true,
-                opacity: 0.3,
+                opacity: 0.4,
                 blending: THREE.AdditiveBlending
             });
-            const glow = new THREE.Mesh(glowGeometry, glowMaterial);
-            group.add(glow);
+            const glow1 = new THREE.Mesh(glowGeometry1, glowMaterial1);
+            group.add(glow1);
+
+            const glowGeometry2 = new THREE.SphereGeometry(size * 2.5, 16, 16);
+            const glowMaterial2 = new THREE.MeshBasicMaterial({
+                color: color,
+                transparent: true,
+                opacity: 0.15,
+                blending: THREE.AdditiveBlending
+            });
+            const glow2 = new THREE.Mesh(glowGeometry2, glowMaterial2);
+            group.add(glow2);
+
+            // Trail effect for high performers
+            if (changeAbs > 50) {
+                const trailGeometry = new THREE.BufferGeometry();
+                const trailPoints = [];
+                for (let i = 0; i < 20; i++) {
+                    trailPoints.push(0, 0, -i * 0.3);
+                }
+                trailGeometry.setAttribute('position', new THREE.Float32BufferAttribute(trailPoints, 3));
+                const trailMaterial = new THREE.PointsMaterial({
+                    color: color,
+                    size: size * 0.5,
+                    transparent: true,
+                    opacity: 0.3,
+                    blending: THREE.AdditiveBlending
+                });
+                const trail = new THREE.Points(trailGeometry, trailMaterial);
+                group.add(trail);
+                group.userData.trail = trail;
+            }
 
             // Orbital parameters
-            const orbitRadius = 20 + Math.random() * 15;
-            const orbitSpeed = (0.2 + Math.random() * 0.3) * (stockData.change > 0 ? 1 : -1);
-            const orbitTilt = Math.random() * Math.PI / 4;
+            const orbitRadius = 22 + Math.random() * 18;
+            const orbitSpeed = (0.15 + Math.random() * 0.25) * (stockData.change > 0 ? 1 : -0.8);
+            const orbitTilt = Math.random() * Math.PI / 3;
             const orbitPhase = Math.random() * Math.PI * 2;
 
             group.userData = {
@@ -598,7 +670,9 @@
                 orbitSpeed,
                 orbitTilt,
                 orbitPhase,
-                baseColor: color
+                baseColor: color,
+                sphere: sphere,
+                glows: [glow1, glow2]
             };
 
             scene.add(group);
@@ -619,13 +693,17 @@
                     }
                     nebula.visible = true;
 
-                    // Rotate nebula
-                    nebula.rotation.y += 0.001;
+                    // Rotate nebula slowly
+                    nebula.rotation.y += 0.002;
 
-                    // Pulse effect
-                    const scale = 1 + Math.sin(animationTime * 2 + i) * 0.05;
+                    // Enhanced pulse effect
+                    const scale = 1 + Math.sin(animationTime * 2 + i) * 0.08;
                     if (nebula.userData.core) {
                         nebula.userData.core.scale.set(scale, scale, scale);
+                    }
+                    if (nebula.userData.glow) {
+                        const glowScale = scale * 1.1;
+                        nebula.userData.glow.scale.set(glowScale, glowScale, glowScale);
                     }
 
                     // Update shader time
@@ -633,16 +711,21 @@
                         nebula.userData.particles.material.uniforms.time.value = animationTime;
                     }
 
-                    // Wave rings
-                    if (nebula.userData.ring) {
-                        const ringScale = 1 + (animationTime * 0.5) % 1;
-                        nebula.userData.ring.scale.set(ringScale, ringScale, 1);
-                        nebula.userData.ring.material.opacity = 0.5 * (1 - (animationTime * 0.5) % 1);
+                    // Multiple wave rings
+                    if (nebula.userData.rings) {
+                        nebula.userData.rings.forEach((ringData, idx) => {
+                            const ring = ringData.mesh;
+                            const offset = ringData.offset;
+                            const phase = (animationTime * 0.4 + offset) % 1;
+                            const ringScale = 1 + phase * 2;
+                            ring.scale.set(ringScale, ringScale, 1);
+                            ring.material.opacity = 0.6 * (1 - phase);
+                        });
                     }
                 });
 
                 // Animate stars (orbit around nebulas)
-                stars.forEach(star => {
+                stars.forEach((star, idx) => {
                     if (!activeMarkets.has(star.userData.market)) {
                         star.visible = false;
                         return;
@@ -659,8 +742,24 @@
                     star.position.y = Math.sin(angle) * radius * Math.sin(star.userData.orbitTilt);
                     star.position.z = parent.position.z + Math.sin(angle) * radius * Math.cos(star.userData.orbitTilt);
 
-                    // Twinkle effect
-                    star.rotation.y += 0.02;
+                    // Enhanced rotation and twinkle
+                    star.rotation.y += 0.03;
+                    star.rotation.z += 0.01;
+
+                    // Pulsing glow effect
+                    if (star.userData.glows) {
+                        const pulse = 1.0 + Math.sin(animationTime * 3 + idx * 0.5) * 0.2;
+                        star.userData.glows.forEach((glow, i) => {
+                            const glowPulse = pulse * (1 + i * 0.1);
+                            glow.scale.set(glowPulse, glowPulse, glowPulse);
+                        });
+                    }
+
+                    // Brightness variation for twinkle
+                    if (star.userData.sphere) {
+                        const brightness = 0.85 + Math.sin(animationTime * 4 + idx) * 0.15;
+                        star.userData.sphere.material.opacity = brightness;
+                    }
                 });
             }
 
