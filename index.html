@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>🌍 Global Earthquake Monitor - 실시간 지진 3D 지구</title>
     <style>
         * {
@@ -16,54 +16,78 @@
             overflow: hidden;
             background: linear-gradient(to bottom, #000000, #0a0a1a);
             color: #ffffff;
+            touch-action: none;
         }
 
         #container {
             display: flex;
             width: 100vw;
             height: 100vh;
+            position: relative;
         }
 
         #controlPanel {
-            width: 350px;
+            width: 320px;
             background: rgba(10, 10, 26, 0.95);
             backdrop-filter: blur(10px);
             border-right: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 20px;
+            padding: 15px;
             overflow-y: auto;
             z-index: 100;
+            transition: transform 0.3s ease;
         }
 
         #canvas-container {
             flex: 1;
             position: relative;
+            overflow: hidden;
         }
 
         canvas {
             display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* 모바일 토글 버튼 */
+        #menuToggle {
+            display: none;
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            z-index: 1001;
+            background: rgba(255, 69, 0, 0.8);
+            border: none;
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(255, 69, 0, 0.5);
         }
 
         h1 {
-            font-size: 20px;
-            margin-bottom: 10px;
+            font-size: 18px;
+            margin-bottom: 8px;
             color: #FF4500;
             text-shadow: 0 0 10px rgba(255, 69, 0, 0.5);
         }
 
         .subtitle {
-            font-size: 12px;
+            font-size: 11px;
             opacity: 0.7;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
 
         .section {
-            margin-bottom: 25px;
+            margin-bottom: 20px;
         }
 
         .section-title {
-            font-size: 14px;
+            font-size: 13px;
             font-weight: bold;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             color: #FF6347;
             text-transform: uppercase;
             letter-spacing: 1px;
@@ -72,37 +96,37 @@
         .stats-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-bottom: 15px;
+            gap: 8px;
+            margin-bottom: 12px;
         }
 
         .stat-box {
             background: rgba(255, 69, 0, 0.1);
             border: 1px solid rgba(255, 69, 0, 0.3);
             border-radius: 5px;
-            padding: 10px;
+            padding: 8px;
             text-align: center;
         }
 
         .stat-number {
-            font-size: 24px;
+            font-size: 20px;
             font-weight: bold;
             color: #FF4500;
         }
 
         .stat-label {
-            font-size: 11px;
+            font-size: 10px;
             opacity: 0.7;
-            margin-top: 5px;
+            margin-top: 3px;
         }
 
         .earthquake-item {
-            padding: 10px;
-            margin: 5px 0;
+            padding: 8px;
+            margin: 4px 0;
             background: rgba(255, 255, 255, 0.03);
             border-radius: 5px;
             border-left: 3px solid;
-            font-size: 12px;
+            font-size: 11px;
             transition: all 0.3s;
             cursor: pointer;
         }
@@ -113,20 +137,14 @@
         }
 
         .eq-magnitude {
-            font-size: 18px;
+            font-size: 16px;
             font-weight: bold;
             display: inline-block;
-            width: 50px;
-        }
-
-        .eq-location {
-            font-size: 11px;
-            opacity: 0.9;
-            margin-top: 3px;
+            width: 45px;
         }
 
         .eq-time {
-            font-size: 10px;
+            font-size: 9px;
             opacity: 0.6;
             margin-top: 3px;
         }
@@ -139,33 +157,34 @@
         .legend {
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 6px;
         }
 
         .legend-item {
             display: flex;
             align-items: center;
-            gap: 10px;
-            font-size: 12px;
+            gap: 8px;
+            font-size: 11px;
         }
 
         .legend-color {
-            width: 30px;
-            height: 15px;
+            width: 25px;
+            height: 12px;
             border-radius: 3px;
+            flex-shrink: 0;
         }
 
         .control-btn {
             width: 100%;
-            padding: 12px;
-            margin: 5px 0;
+            padding: 10px;
+            margin: 4px 0;
             border: 1px solid rgba(255, 69, 0, 0.3);
             background: rgba(255, 69, 0, 0.2);
             color: white;
             cursor: pointer;
             border-radius: 5px;
             transition: all 0.3s;
-            font-size: 13px;
+            font-size: 12px;
         }
 
         .control-btn:hover {
@@ -175,19 +194,19 @@
 
         .filter-group {
             display: flex;
-            gap: 5px;
-            margin-top: 10px;
+            gap: 4px;
+            margin-top: 8px;
         }
 
         .filter-btn {
             flex: 1;
-            padding: 8px;
+            padding: 6px;
             border: 1px solid rgba(255, 255, 255, 0.2);
             background: rgba(255, 255, 255, 0.05);
             color: white;
             cursor: pointer;
             border-radius: 5px;
-            font-size: 11px;
+            font-size: 10px;
             transition: all 0.3s;
         }
 
@@ -200,13 +219,14 @@
             position: absolute;
             top: 20px;
             right: 20px;
-            background: rgba(255, 69, 0, 0.2);
+            background: rgba(255, 69, 0, 0.9);
             border: 1px solid rgba(255, 69, 0, 0.5);
             padding: 10px 15px;
             border-radius: 5px;
             font-size: 12px;
             z-index: 200;
             display: none;
+            color: white;
         }
 
         #loadingIndicator.show {
@@ -214,23 +234,33 @@
         }
 
         #tooltip {
-            position: absolute;
-            background: rgba(0, 0, 0, 0.9);
+            position: fixed;
+            background: rgba(255, 69, 0, 0.95);
             color: white;
             padding: 12px 15px;
-            border-radius: 5px;
+            border-radius: 8px;
             pointer-events: none;
             display: none;
-            z-index: 1000;
-            font-size: 12px;
-            border: 1px solid rgba(255, 69, 0, 0.5);
-            max-width: 250px;
+            z-index: 10000;
+            font-size: 13px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            max-width: 280px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
         }
 
         .tooltip-magnitude {
-            font-size: 20px;
+            font-size: 22px;
             font-weight: bold;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
+            color: #FFF;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .tooltip-info {
+            font-size: 12px;
+            line-height: 1.6;
+            opacity: 0.95;
         }
 
         .ring-of-fire {
@@ -250,11 +280,140 @@
             background: rgba(255, 69, 0, 0.5);
             border-radius: 3px;
         }
+
+        /* 모바일 반응형 */
+        @media (max-width: 768px) {
+            #menuToggle {
+                display: block;
+            }
+
+            #controlPanel {
+                position: fixed;
+                left: 0;
+                top: 0;
+                height: 100vh;
+                width: 85%;
+                max-width: 300px;
+                transform: translateX(-100%);
+                box-shadow: 4px 0 20px rgba(0, 0, 0, 0.5);
+            }
+
+            #controlPanel.open {
+                transform: translateX(0);
+            }
+
+            #canvas-container {
+                width: 100%;
+            }
+
+            h1 {
+                font-size: 16px;
+            }
+
+            .subtitle {
+                font-size: 10px;
+            }
+
+            .section {
+                margin-bottom: 15px;
+            }
+
+            .section-title {
+                font-size: 12px;
+            }
+
+            .stat-number {
+                font-size: 18px;
+            }
+
+            #loadingIndicator {
+                top: 75px;
+                right: 10px;
+                font-size: 11px;
+                padding: 8px 12px;
+            }
+
+            #tooltip {
+                font-size: 12px;
+                padding: 10px 12px;
+                max-width: 240px;
+            }
+
+            .tooltip-magnitude {
+                font-size: 18px;
+            }
+
+            .tooltip-info {
+                font-size: 11px;
+            }
+        }
+
+        /* 태블릿 */
+        @media (min-width: 769px) and (max-width: 1024px) {
+            #controlPanel {
+                width: 280px;
+                padding: 12px;
+            }
+
+            h1 {
+                font-size: 17px;
+            }
+        }
+
+        /* 작은 모바일 */
+        @media (max-width: 480px) {
+            #controlPanel {
+                width: 90%;
+                max-width: 280px;
+            }
+
+            .stats-grid {
+                gap: 6px;
+            }
+
+            .stat-box {
+                padding: 6px;
+            }
+
+            .stat-number {
+                font-size: 16px;
+            }
+
+            .stat-label {
+                font-size: 9px;
+            }
+        }
+
+        /* 닫기 버튼 (모바일용) */
+        #closePanel {
+            display: none;
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255, 69, 0, 0.5);
+            border: none;
+            color: white;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            font-size: 20px;
+            cursor: pointer;
+            z-index: 101;
+        }
+
+        @media (max-width: 768px) {
+            #closePanel {
+                display: block;
+            }
+        }
     </style>
 </head>
 <body>
+    <button id="menuToggle">☰</button>
+
     <div id="container">
         <div id="controlPanel">
+            <button id="closePanel">×</button>
             <h1>🌍 Global Earthquake Monitor</h1>
             <div class="subtitle">실시간 세계 지진 3D 시각화</div>
 
@@ -281,21 +440,6 @@
             </div>
 
             <div class="section">
-                <div class="section-title">필터</div>
-                <div class="filter-group">
-                    <button class="filter-btn active" data-period="hour">1시간</button>
-                    <button class="filter-btn active" data-period="day">1일</button>
-                    <button class="filter-btn active" data-period="week">1주일</button>
-                </div>
-                <div class="filter-group" style="margin-top: 5px;">
-                    <button class="filter-btn active" data-mag="4">4.5+</button>
-                    <button class="filter-btn active" data-mag="5">5.0+</button>
-                    <button class="filter-btn active" data-mag="6">6.0+</button>
-                    <button class="filter-btn active" data-mag="7">7.0+</button>
-                </div>
-            </div>
-
-            <div class="section">
                 <div class="section-title">최근 지진 TOP 10</div>
                 <div id="recentEarthquakes"></div>
             </div>
@@ -305,18 +449,18 @@
                 <div class="legend">
                     <div class="legend-item">
                         <div class="legend-color" style="background: #FF0000;"></div>
-                        <span>최근 1시간 (붉은색)</span>
+                        <span>최근 1시간</span>
                     </div>
                     <div class="legend-item">
                         <div class="legend-color" style="background: #FFA500;"></div>
-                        <span>최근 1일 (주황색)</span>
+                        <span>최근 1일</span>
                     </div>
                     <div class="legend-item">
                         <div class="legend-color" style="background: #FFFF00;"></div>
-                        <span>최근 1주일 (노란색)</span>
+                        <span>최근 1주일</span>
                     </div>
                     <div class="legend-item">
-                        <span style="font-size: 20px;">💥</span>
+                        <span style="font-size: 18px;">💥</span>
                         <span>크기 = 지진 규모</span>
                     </div>
                 </div>
@@ -331,9 +475,9 @@
 
             <div class="section">
                 <div class="section-title">정보</div>
-                <div style="font-size: 11px; opacity: 0.7; line-height: 1.6;">
-                    <p><span class="ring-of-fire">환태평양 화산대 (Ring of Fire)</span>에서 전 세계 지진의 약 90%가 발생합니다.</p>
-                    <p style="margin-top: 10px;">데이터 출처: USGS (미국 지질조사국)</p>
+                <div style="font-size: 10px; opacity: 0.7; line-height: 1.5;">
+                    <p><span class="ring-of-fire">환태평양 화산대</span>에서 전 세계 지진의 약 90%가 발생합니다.</p>
+                    <p style="margin-top: 8px;">데이터: USGS (미국 지질조사국)</p>
                     <p>업데이트: 5분마다 자동</p>
                     <p>비용: 100% 무료</p>
                 </div>
@@ -367,12 +511,6 @@
         let raycaster, mouse;
         let earthquakeData = [];
 
-        // Filter states
-        let activeFilters = {
-            periods: new Set(['hour', 'day', 'week']),
-            magnitudes: new Set(['4', '5', '6', '7'])
-        };
-
         function init() {
             // Scene
             scene = new THREE.Scene();
@@ -391,7 +529,7 @@
             // Renderer
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(container.clientWidth, container.clientHeight);
-            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             container.appendChild(renderer.domElement);
 
             // Controls
@@ -402,6 +540,7 @@
             controls.maxDistance = 300;
             controls.autoRotate = true;
             controls.autoRotateSpeed = 0.5;
+            controls.enablePan = false;
 
             // Raycaster
             raycaster = new THREE.Raycaster();
@@ -426,6 +565,10 @@
             renderer.domElement.addEventListener('mousemove', onMouseMove);
             renderer.domElement.addEventListener('click', onClick);
 
+            // Touch events for mobile
+            renderer.domElement.addEventListener('touchstart', onTouchStart);
+            renderer.domElement.addEventListener('touchmove', onTouchMove);
+
             // UI setup
             setupUI();
 
@@ -442,7 +585,6 @@
         function createEarth() {
             const geometry = new THREE.SphereGeometry(50, 64, 64);
 
-            // Earth texture (simple color for now)
             const material = new THREE.MeshPhongMaterial({
                 color: 0x1a4d2e,
                 emissive: 0x0a1f16,
@@ -527,7 +669,6 @@
             scene.add(starField);
         }
 
-        // Convert lat/lon to 3D position on sphere
         function latLonToVector3(lat, lon, radius = 50) {
             const phi = (90 - lat) * Math.PI / 180;
             const theta = (lon + 180) * Math.PI / 180;
@@ -544,7 +685,6 @@
             loading.classList.add('show');
 
             try {
-                // Fetch last 7 days, magnitude 4.5+
                 const response = await fetch('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_week.geojson');
                 const data = await response.json();
 
@@ -558,7 +698,6 @@
                     id: feature.id
                 }));
 
-                // Sort by magnitude
                 earthquakeData.sort((a, b) => b.magnitude - a.magnitude);
 
                 updateStatistics();
@@ -574,7 +713,6 @@
         }
 
         function createEarthquakeMarkers() {
-            // Remove old markers
             earthquakes.forEach(eq => earth.remove(eq));
             earthquakes = [];
 
@@ -583,20 +721,17 @@
             earthquakeData.forEach(eq => {
                 const ageHours = (now - eq.time.getTime()) / (1000 * 60 * 60);
 
-                // Determine color based on age
                 let color;
                 if (ageHours < 1) {
-                    color = new THREE.Color(0xFF0000); // Red - last hour
+                    color = new THREE.Color(0xFF0000);
                 } else if (ageHours < 24) {
-                    color = new THREE.Color(0xFFA500); // Orange - last day
+                    color = new THREE.Color(0xFFA500);
                 } else {
-                    color = new THREE.Color(0xFFFF00); // Yellow - last week
+                    color = new THREE.Color(0xFFFF00);
                 }
 
-                // Size based on magnitude
                 const size = Math.pow(2, eq.magnitude - 4) * 0.8;
 
-                // Create marker
                 const geometry = new THREE.SphereGeometry(size, 16, 16);
                 const material = new THREE.MeshBasicMaterial({
                     color: color,
@@ -606,11 +741,9 @@
 
                 const marker = new THREE.Mesh(geometry, material);
 
-                // Position on Earth surface
                 const pos = latLonToVector3(eq.lat, eq.lon, 50.5);
                 marker.position.copy(pos);
 
-                // Add glow
                 const glowGeometry = new THREE.SphereGeometry(size * 1.5, 16, 16);
                 const glowMaterial = new THREE.MeshBasicMaterial({
                     color: color,
@@ -621,7 +754,6 @@
                 const glow = new THREE.Mesh(glowGeometry, glowMaterial);
                 marker.add(glow);
 
-                // Store earthquake data
                 marker.userData = eq;
 
                 earth.add(marker);
@@ -664,7 +796,12 @@
                     <div class="eq-time">${timeAgo} - Depth: ${eq.depth.toFixed(0)}km</div>
                 `;
 
-                item.onclick = () => focusOnEarthquake(eq);
+                item.onclick = () => {
+                    focusOnEarthquake(eq);
+                    if (window.innerWidth <= 768) {
+                        closePanel();
+                    }
+                };
                 container.appendChild(item);
             });
         }
@@ -679,10 +816,35 @@
         }
 
         function focusOnEarthquake(eq) {
-            const pos = latLonToVector3(eq.lat, eq.lon, 120);
+            const targetPos = latLonToVector3(eq.lat, eq.lon, 50);
+            const distance = 100;
 
-            controls.target.copy(latLonToVector3(eq.lat, eq.lon, 50));
-            camera.position.copy(pos);
+            // Calculate camera position looking at the earthquake from outside
+            const direction = targetPos.clone().normalize();
+            const cameraPos = direction.multiplyScalar(distance);
+
+            // Smooth transition
+            const duration = 1000;
+            const startPos = camera.position.clone();
+            const startTarget = controls.target.clone();
+            const startTime = Date.now();
+
+            function animateCamera() {
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const eased = progress < 0.5
+                    ? 2 * progress * progress
+                    : -1 + (4 - 2 * progress) * progress;
+
+                camera.position.lerpVectors(startPos, cameraPos, eased);
+                controls.target.lerpVectors(startTarget, targetPos, eased);
+
+                if (progress < 1) {
+                    requestAnimationFrame(animateCamera);
+                }
+            }
+
+            animateCamera();
         }
 
         function animate() {
@@ -691,10 +853,11 @@
             if (!isPaused) {
                 animationTime += 0.016;
 
-                // Pulse earthquakes
                 earthquakes.forEach((marker, idx) => {
                     const pulse = 1.0 + Math.sin(animationTime * 3 + idx * 0.5) * 0.2;
-                    marker.children[0].scale.set(pulse, pulse, pulse);
+                    if (marker.children[0]) {
+                        marker.children[0].scale.set(pulse, pulse, pulse);
+                    }
                 });
             }
 
@@ -702,11 +865,38 @@
             renderer.render(scene, camera);
         }
 
+        let touchStartTime = 0;
+        let touchStartPos = { x: 0, y: 0 };
+
+        function onTouchStart(event) {
+            if (event.touches.length === 1) {
+                touchStartTime = Date.now();
+                touchStartPos.x = event.touches[0].clientX;
+                touchStartPos.y = event.touches[0].clientY;
+            }
+        }
+
+        function onTouchMove(event) {
+            if (event.touches.length === 1) {
+                const deltaX = Math.abs(event.touches[0].clientX - touchStartPos.x);
+                const deltaY = Math.abs(event.touches[0].clientY - touchStartPos.y);
+
+                // If moved more than 10px, it's a pan gesture, not a tap
+                if (deltaX > 10 || deltaY > 10) {
+                    touchStartTime = 0;
+                }
+            }
+        }
+
         function onMouseMove(event) {
             const rect = renderer.domElement.getBoundingClientRect();
             mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
             mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
+            updateTooltip(event.clientX, event.clientY);
+        }
+
+        function updateTooltip(clientX, clientY) {
             raycaster.setFromCamera(mouse, camera);
             const intersects = raycaster.intersectObjects(earthquakes);
 
@@ -715,20 +905,25 @@
             if (intersects.length > 0) {
                 const eq = intersects[0].object.userData;
 
-                tooltip.style.display = 'block';
-                tooltip.style.left = event.clientX + 10 + 'px';
-                tooltip.style.top = event.clientY + 10 + 'px';
+                if (eq && eq.magnitude) {
+                    tooltip.style.display = 'block';
+                    tooltip.style.left = clientX + 15 + 'px';
+                    tooltip.style.top = clientY + 15 + 'px';
 
-                tooltip.innerHTML = `
-                    <div class="tooltip-magnitude">규모 ${eq.magnitude.toFixed(1)}</div>
-                    <div>${eq.place}</div>
-                    <div style="margin-top: 5px; font-size: 10px; opacity: 0.7;">
-                        깊이: ${eq.depth.toFixed(0)}km<br>
-                        ${getTimeAgo(eq.time)}
-                    </div>
-                `;
+                    tooltip.innerHTML = `
+                        <div class="tooltip-magnitude">규모 ${eq.magnitude.toFixed(1)}</div>
+                        <div class="tooltip-info">
+                            <strong>${eq.place}</strong><br>
+                            깊이: ${eq.depth.toFixed(0)}km<br>
+                            ${getTimeAgo(eq.time)}
+                        </div>
+                    `;
 
-                renderer.domElement.style.cursor = 'pointer';
+                    renderer.domElement.style.cursor = 'pointer';
+                } else {
+                    tooltip.style.display = 'none';
+                    renderer.domElement.style.cursor = 'default';
+                }
             } else {
                 tooltip.style.display = 'none';
                 renderer.domElement.style.cursor = 'default';
@@ -745,7 +940,9 @@
 
             if (intersects.length > 0) {
                 const eq = intersects[0].object.userData;
-                focusOnEarthquake(eq);
+                if (eq && eq.magnitude) {
+                    focusOnEarthquake(eq);
+                }
             }
         }
 
@@ -757,6 +954,33 @@
         }
 
         function setupUI() {
+            // Mobile menu toggle
+            const menuToggle = document.getElementById('menuToggle');
+            const closePanel = document.getElementById('closePanel');
+            const controlPanel = document.getElementById('controlPanel');
+
+            function openPanel() {
+                controlPanel.classList.add('open');
+            }
+
+            function closePanel() {
+                controlPanel.classList.remove('open');
+            }
+
+            menuToggle.addEventListener('click', openPanel);
+            closePanel.addEventListener('click', closePanel);
+
+            // Close panel when clicking outside on mobile
+            document.getElementById('canvas-container').addEventListener('click', (e) => {
+                if (window.innerWidth <= 768 && controlPanel.classList.contains('open')) {
+                    if (!controlPanel.contains(e.target)) {
+                        closePanel();
+                    }
+                }
+            });
+
+            window.closePanel = closePanel; // Make it accessible
+
             // Refresh button
             document.getElementById('refreshBtn').addEventListener('click', fetchEarthquakeData);
 
