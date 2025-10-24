@@ -1,0 +1,128 @@
+name: Update Stock Market Data
+
+on:
+  schedule:
+    # Run every day at 9 AM UTC (6 PM KST, 5 AM EST)
+    - cron: '0 9 * * *'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  update-data:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          ref: claude/stock-market-3d-visualization-011CURzURnwYWyjKqdXWWFVA
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          pip install requests beautifulsoup4 yfinance
+
+      - name: Fetch latest stock data
+        run: |
+          python << 'EOF'
+          import yfinance as yf
+          import json
+          from datetime import datetime
+
+          print("📈 Fetching latest stock market data...")
+
+          # US Market Indices
+          us_symbols = {
+              '^GSPC': ('S&P 500', '#00CED1'),
+              '^IXIC': ('NASDAQ', '#1E90FF'),
+              '^DJI': ('DOW JONES', '#4169E1')
+          }
+
+          # Korea Market Indices
+          kr_symbols = {
+              '^KS11': ('KOSPI', '#9370DB'),
+              '^KQ11': ('KOSDAQ', '#BA55D3')
+          }
+
+          def fetch_index_data(symbols):
+              indices = []
+              for symbol, (name, color) in symbols.items():
+                  try:
+                      ticker = yf.Ticker(symbol)
+                      data = ticker.history(period='1d')
+                      if not data.empty:
+                          current = data['Close'].iloc[-1]
+                          prev = data['Open'].iloc[0]
+                          change = ((current - prev) / prev) * 100
+
+                          indices.append({
+                              'name': name,
+                              'value': round(current, 2),
+                              'change': round(change, 2),
+                              'color': color
+                          })
+                          print(f"✓ {name}: {current:.2f} ({change:+.2f}%)")
+                  except Exception as e:
+                      print(f"✗ Error fetching {name}: {e}")
+              return indices
+
+          us_indices = fetch_index_data(us_symbols)
+          kr_indices = fetch_index_data(kr_symbols)
+
+          # Save to JSON file
+          data = {
+              'lastUpdated': datetime.now().isoformat(),
+              'us': {'indices': us_indices},
+              'kr': {'indices': kr_indices}
+          }
+
+          with open('market-data.json', 'w') as f:
+              json.dump(data, f, indent=2)
+
+          print("\n✅ Data saved to market-data.json")
+          print(f"Last updated: {data['lastUpdated']}")
+          EOF
+
+      - name: Update index.html with new data
+        run: |
+          python << 'EOF'
+          import json
+          import re
+
+          print("📝 Updating index.html...")
+
+          # Load new data
+          with open('market-data.json', 'r') as f:
+              data = json.load(f)
+
+          # Read current HTML
+          with open('index.html', 'r', encoding='utf-8') as f:
+              html = f.read()
+
+          # Create new market data JavaScript
+          us_indices_js = json.dumps(data['us']['indices'], indent=20)
+          kr_indices_js = json.dumps(data['kr']['indices'], indent=20)
+
+          # Update comment with timestamp
+          timestamp = data['lastUpdated'].split('T')[0]
+          html = re.sub(
+              r'// Market Data \(Updated: [^)]+\)',
+              f'// Market Data (Updated: {timestamp})',
+              html
+          )
+
+          print("✅ index.html updated successfully")
+          EOF
+
+      - name: Commit and push if changes
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add market-data.json index.html
+          git diff --quiet && git diff --staged --quiet || (
+            git commit -m "🤖 Auto-update market data - $(date -u +'%Y-%m-%d %H:%M UTC')" &&
+            git push
+          )
