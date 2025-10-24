@@ -792,51 +792,69 @@
         // Create text sprite for 3D labels
         function makeTextSprite(message, parameters = {}) {
             const fontface = parameters.fontface || 'Arial';
-            const fontsize = parameters.fontsize || 70;
-            const backgroundColor = parameters.backgroundColor || { r: 0, g: 0, b: 0, a: 0.8 };
+            const fontsize = parameters.fontsize || 60;
+            const backgroundColor = parameters.backgroundColor || { r: 0, g: 0, b: 0, a: 0.85 };
             const borderColor = parameters.borderColor || { r: 255, g: 69, b: 0, a: 1.0 };
 
             const canvas = document.createElement('canvas');
             const context = canvas.getContext('2d');
 
-            // Set canvas size
-            canvas.width = 1024;
-            canvas.height = 256;
+            // Measure text first to set proper canvas size
+            context.font = `Bold ${fontsize}px ${fontface}`;
+            const metrics = context.measureText(message);
+            const textWidth = metrics.width;
 
+            const padding = 30;
+            const borderWidth = 8;
+            const canvasWidth = Math.ceil(textWidth + padding * 2 + borderWidth * 2);
+            const canvasHeight = Math.ceil(fontsize * 1.5 + padding + borderWidth * 2);
+
+            // Set canvas size based on text
+            canvas.width = canvasWidth;
+            canvas.height = canvasHeight;
+
+            // Re-set font after canvas resize
             context.font = `Bold ${fontsize}px ${fontface}`;
             context.textAlign = 'center';
             context.textBaseline = 'middle';
 
-            // Background
-            context.fillStyle = `rgba(${backgroundColor.r}, ${backgroundColor.g}, ${backgroundColor.b}, ${backgroundColor.a})`;
-            context.strokeStyle = `rgba(${borderColor.r}, ${borderColor.g}, ${borderColor.b}, ${borderColor.a})`;
-            context.lineWidth = 10;
-
-            const textWidth = context.measureText(message).width;
-            const padding = 40;
-            const boxWidth = textWidth + padding * 2;
-            const boxHeight = fontsize + padding;
             const x = canvas.width / 2;
             const y = canvas.height / 2;
+            const boxWidth = canvasWidth - borderWidth * 2;
+            const boxHeight = canvasHeight - borderWidth * 2;
 
-            // Draw rounded rectangle
+            // Draw rounded rectangle background
+            context.fillStyle = `rgba(${backgroundColor.r}, ${backgroundColor.g}, ${backgroundColor.b}, ${backgroundColor.a})`;
+            context.strokeStyle = `rgba(${borderColor.r}, ${borderColor.g}, ${borderColor.b}, ${borderColor.a})`;
+            context.lineWidth = borderWidth;
+
+            const radius = 12;
             context.beginPath();
-            const radius = 15;
-            context.moveTo(x - boxWidth/2 + radius, y - boxHeight/2);
-            context.lineTo(x + boxWidth/2 - radius, y - boxHeight/2);
-            context.quadraticCurveTo(x + boxWidth/2, y - boxHeight/2, x + boxWidth/2, y - boxHeight/2 + radius);
-            context.lineTo(x + boxWidth/2, y + boxHeight/2 - radius);
-            context.quadraticCurveTo(x + boxWidth/2, y + boxHeight/2, x + boxWidth/2 - radius, y + boxHeight/2);
-            context.lineTo(x - boxWidth/2 + radius, y + boxHeight/2);
-            context.quadraticCurveTo(x - boxWidth/2, y + boxHeight/2, x - boxWidth/2, y + boxHeight/2 - radius);
-            context.lineTo(x - boxWidth/2, y - boxHeight/2 + radius);
-            context.quadraticCurveTo(x - boxWidth/2, y - boxHeight/2, x - boxWidth/2 + radius, y - boxHeight/2);
+            const left = borderWidth;
+            const top = borderWidth;
+            const right = canvasWidth - borderWidth;
+            const bottom = canvasHeight - borderWidth;
+
+            context.moveTo(left + radius, top);
+            context.lineTo(right - radius, top);
+            context.arcTo(right, top, right, top + radius, radius);
+            context.lineTo(right, bottom - radius);
+            context.arcTo(right, bottom, right - radius, bottom, radius);
+            context.lineTo(left + radius, bottom);
+            context.arcTo(left, bottom, left, bottom - radius, radius);
+            context.lineTo(left, top + radius);
+            context.arcTo(left, top, left + radius, top, radius);
             context.closePath();
+
             context.fill();
             context.stroke();
 
-            // Text
+            // Draw text
             context.fillStyle = 'rgba(255, 255, 255, 1.0)';
+            context.shadowColor = 'rgba(0, 0, 0, 0.8)';
+            context.shadowBlur = 4;
+            context.shadowOffsetX = 2;
+            context.shadowOffsetY = 2;
             context.fillText(message, x, y);
 
             // Create sprite
@@ -851,9 +869,29 @@
             });
 
             const sprite = new THREE.Sprite(spriteMaterial);
-            sprite.scale.set(20, 5, 1);
+
+            // Scale proportional to canvas size
+            const scale = 0.025;
+            sprite.scale.set(canvasWidth * scale, canvasHeight * scale, 1);
 
             return sprite;
+        }
+
+        // Shorten location name for better display
+        function shortenPlace(place) {
+            // Remove common prefixes
+            place = place.replace(/^(south of |north of |east of |west of |near |off the coast of )/i, '');
+
+            // Extract main location (before comma or "region")
+            const parts = place.split(',');
+            let main = parts[0].trim();
+
+            // If still too long, take first 25 characters
+            if (main.length > 30) {
+                main = main.substring(0, 27) + '...';
+            }
+
+            return main;
         }
 
         function createEarthquakeMarkers() {
@@ -903,8 +941,9 @@
 
                 marker.userData = eq;
 
-                // Add 3D text sprite label
-                const labelText = `${eq.magnitude.toFixed(1)} - ${eq.place}`;
+                // Add 3D text sprite label with shortened place name
+                const shortPlace = shortenPlace(eq.place);
+                const labelText = `${eq.magnitude.toFixed(1)} - ${shortPlace}`;
                 const sprite = makeTextSprite(labelText);
 
                 // Position label above the marker
