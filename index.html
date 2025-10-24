@@ -430,6 +430,174 @@
                 padding: 2px 4px;
             }
         }
+
+        /* 지진 정보 카드 */
+        #earthquakeCard {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(10, 10, 26, 0.98);
+            border: 2px solid rgba(255, 69, 0, 0.8);
+            border-radius: 12px;
+            padding: 25px;
+            z-index: 10001;
+            display: none;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 10px 50px rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+        }
+
+        #earthquakeCard.show {
+            display: block;
+            animation: cardSlideIn 0.3s ease-out;
+        }
+
+        @keyframes cardSlideIn {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -60%);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, -50%);
+            }
+        }
+
+        .card-header {
+            font-size: 22px;
+            font-weight: bold;
+            color: #FF4500;
+            margin-bottom: 15px;
+            text-align: center;
+            border-bottom: 2px solid rgba(255, 69, 0, 0.3);
+            padding-bottom: 10px;
+        }
+
+        .card-info {
+            margin: 12px 0;
+            font-size: 14px;
+            line-height: 1.8;
+            color: #ffffff;
+        }
+
+        .card-info-item {
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0;
+            padding: 5px 0;
+        }
+
+        .card-info-label {
+            color: #aaa;
+            font-weight: normal;
+        }
+
+        .card-info-value {
+            color: #fff;
+            font-weight: bold;
+        }
+
+        .card-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .card-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+
+        .card-btn-news {
+            background: linear-gradient(135deg, #FF4500, #FF6347);
+            color: white;
+        }
+
+        .card-btn-news:hover {
+            background: linear-gradient(135deg, #FF6347, #FF7F50);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 69, 0, 0.4);
+        }
+
+        .card-btn-usgs {
+            background: linear-gradient(135deg, #4169E1, #1E90FF);
+            color: white;
+        }
+
+        .card-btn-usgs:hover {
+            background: linear-gradient(135deg, #1E90FF, #00BFFF);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(65, 105, 225, 0.4);
+        }
+
+        .card-close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255, 69, 0, 0.3);
+            border: none;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .card-close:hover {
+            background: rgba(255, 69, 0, 0.6);
+            transform: rotate(90deg);
+        }
+
+        #cardOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 10000;
+            display: none;
+        }
+
+        #cardOverlay.show {
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            #earthquakeCard {
+                padding: 20px;
+                max-width: 350px;
+            }
+
+            .card-header {
+                font-size: 18px;
+            }
+
+            .card-info {
+                font-size: 13px;
+            }
+
+            .card-btn {
+                padding: 10px;
+                font-size: 13px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -511,6 +679,39 @@
         <div id="canvas-container">
             <div id="loadingIndicator">🔄 Loading...</div>
             <div id="tooltip"></div>
+        </div>
+    </div>
+
+    <!-- 지진 정보 카드 -->
+    <div id="cardOverlay"></div>
+    <div id="earthquakeCard">
+        <button class="card-close" id="cardClose">×</button>
+        <div class="card-header" id="cardTitle">규모 5.8 지진</div>
+        <div class="card-info">
+            <div class="card-info-item">
+                <span class="card-info-label">📍 위치</span>
+                <span class="card-info-value" id="cardLocation">Japan</span>
+            </div>
+            <div class="card-info-item">
+                <span class="card-info-label">⏰ 발생시간</span>
+                <span class="card-info-value" id="cardTime">2시간 전</span>
+            </div>
+            <div class="card-info-item">
+                <span class="card-info-label">🌊 깊이</span>
+                <span class="card-info-value" id="cardDepth">10 km</span>
+            </div>
+            <div class="card-info-item">
+                <span class="card-info-label">🗺️ 좌표</span>
+                <span class="card-info-value" id="cardCoords">35.23°, 139.85°</span>
+            </div>
+        </div>
+        <div class="card-buttons">
+            <a class="card-btn card-btn-news" id="cardNewsBtn" href="#" target="_blank">
+                📰 뉴스 보기
+            </a>
+            <a class="card-btn card-btn-usgs" id="cardUsgsBtn" href="#" target="_blank">
+                🔍 상세 정보
+            </a>
         </div>
     </div>
 
@@ -806,7 +1007,9 @@
                     lat: feature.geometry.coordinates[1],
                     lon: feature.geometry.coordinates[0],
                     depth: feature.geometry.coordinates[2],
-                    id: feature.id
+                    id: feature.id,
+                    url: feature.properties.url,
+                    title: feature.properties.title
                 }));
 
                 earthquakeData.sort((a, b) => b.magnitude - a.magnitude);
@@ -1031,7 +1234,7 @@
                 `;
 
                 item.onclick = () => {
-                    focusOnEarthquake(eq);
+                    showEarthquakeCard(eq);
                     if (window.innerWidth <= 768) {
                         closePanel();
                     }
@@ -1176,9 +1379,38 @@
             if (intersects.length > 0) {
                 const eq = intersects[0].object.userData;
                 if (eq && eq.magnitude) {
-                    focusOnEarthquake(eq);
+                    showEarthquakeCard(eq);
                 }
             }
+        }
+
+        function showEarthquakeCard(eq) {
+            // 카메라 포커스
+            focusOnEarthquake(eq);
+
+            // 카드 정보 업데이트
+            document.getElementById('cardTitle').textContent = `규모 ${eq.magnitude.toFixed(1)} 지진`;
+            document.getElementById('cardLocation').textContent = eq.place;
+            document.getElementById('cardTime').textContent = getTimeAgo(eq.time);
+            document.getElementById('cardDepth').textContent = `${eq.depth.toFixed(1)} km`;
+            document.getElementById('cardCoords').textContent = `${eq.lat.toFixed(2)}°, ${eq.lon.toFixed(2)}°`;
+
+            // Google 뉴스 검색 URL
+            const newsQuery = encodeURIComponent(`magnitude ${eq.magnitude.toFixed(1)} earthquake ${eq.place}`);
+            const newsUrl = `https://www.google.com/search?q=${newsQuery}&tbm=nws`;
+            document.getElementById('cardNewsBtn').href = newsUrl;
+
+            // USGS 상세 페이지 URL
+            document.getElementById('cardUsgsBtn').href = eq.url || 'https://earthquake.usgs.gov/';
+
+            // 카드와 오버레이 표시
+            document.getElementById('earthquakeCard').classList.add('show');
+            document.getElementById('cardOverlay').classList.add('show');
+        }
+
+        function hideEarthquakeCard() {
+            document.getElementById('earthquakeCard').classList.remove('show');
+            document.getElementById('cardOverlay').classList.remove('show');
         }
 
         function onWindowResize() {
@@ -1215,6 +1447,17 @@
             });
 
             window.closePanel = closePanel; // Make it accessible
+
+            // Earthquake card events
+            document.getElementById('cardClose').addEventListener('click', hideEarthquakeCard);
+            document.getElementById('cardOverlay').addEventListener('click', hideEarthquakeCard);
+
+            // ESC key to close card
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    hideEarthquakeCard();
+                }
+            });
 
             // Refresh button
             document.getElementById('refreshBtn').addEventListener('click', fetchEarthquakeData);
