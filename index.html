@@ -406,6 +406,28 @@
                 display: block;
             }
         }
+
+        /* 3D 라벨 스타일 */
+        .earthquake-label {
+            color: white;
+            font-size: 11px;
+            font-weight: bold;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 3px 6px;
+            border-radius: 4px;
+            border: 1px solid rgba(255, 69, 0, 0.8);
+            white-space: nowrap;
+            pointer-events: none;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+        }
+
+        @media (max-width: 768px) {
+            .earthquake-label {
+                font-size: 9px;
+                padding: 2px 4px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -502,16 +524,18 @@
     <script type="module">
         import * as THREE from 'three';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 
         console.log('🚀 Script loaded, THREE:', THREE);
 
         // Scene setup
-        let scene, camera, renderer, controls;
+        let scene, camera, renderer, labelRenderer, controls;
         let earth, earthquakes = [];
         let isPaused = false;
         let animationTime = 0;
         let raycaster, mouse;
         let earthquakeData = [];
+        let earthquakeLabels = [];
 
         function init() {
             try {
@@ -540,6 +564,14 @@
                 renderer.setSize(container.clientWidth, container.clientHeight);
                 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
                 container.appendChild(renderer.domElement);
+
+                // Label renderer for 3D text
+                labelRenderer = new CSS2DRenderer();
+                labelRenderer.setSize(container.clientWidth, container.clientHeight);
+                labelRenderer.domElement.style.position = 'absolute';
+                labelRenderer.domElement.style.top = '0px';
+                labelRenderer.domElement.style.pointerEvents = 'none';
+                container.appendChild(labelRenderer.domElement);
 
                 console.log('✅ Renderer created and added to DOM');
 
@@ -616,35 +648,28 @@
         function createEarth() {
             const geometry = new THREE.SphereGeometry(50, 64, 64);
 
-            // Beautiful Earth with ocean blue and land green
+            // Load real Earth texture
+            const textureLoader = new THREE.TextureLoader();
+
+            // Using NASA's Blue Marble texture (free to use)
+            const earthTexture = textureLoader.load(
+                'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/planets/earth_atmos_2048.jpg',
+                () => { console.log('✅ Earth texture loaded'); },
+                undefined,
+                (err) => { console.error('❌ Failed to load Earth texture:', err); }
+            );
+
             const material = new THREE.MeshPhongMaterial({
-                color: 0x1e90ff,  // Deep sky blue for oceans
-                emissive: 0x0d47a1,  // Blue glow
-                emissiveIntensity: 0.2,
-                shininess: 25,
-                specular: 0x4fc3f7,  // Water reflection
-                transparent: false,
-                opacity: 1.0
+                map: earthTexture,
+                shininess: 15,
+                specular: 0x333333,
             });
 
             earth = new THREE.Mesh(geometry, material);
             scene.add(earth);
 
-            // Add land masses (simplified continents effect)
-            const landGeometry = new THREE.SphereGeometry(50.3, 64, 64);
-            const landMaterial = new THREE.MeshPhongMaterial({
-                color: 0x2d5016,  // Dark forest green
-                emissive: 0x1a3010,
-                emissiveIntensity: 0.15,
-                transparent: true,
-                opacity: 0.85,
-                side: THREE.FrontSide
-            });
-            const landLayer = new THREE.Mesh(landGeometry, landMaterial);
-            earth.add(landLayer);
-
             // Add outer atmosphere glow
-            const atmosphereGeometry = new THREE.SphereGeometry(53, 64, 64);
+            const atmosphereGeometry = new THREE.SphereGeometry(52.5, 64, 64);
             const atmosphereMaterial = new THREE.ShaderMaterial({
                 uniforms: {},
                 vertexShader: `
@@ -657,7 +682,7 @@
                 fragmentShader: `
                     varying vec3 vNormal;
                     void main() {
-                        float intensity = pow(0.7 - dot(vNormal, vec3(0.0, 0.0, 1.0)), 2.0);
+                        float intensity = pow(0.65 - dot(vNormal, vec3(0.0, 0.0, 1.0)), 2.0);
                         gl_FragColor = vec4(0.3, 0.6, 1.0, 1.0) * intensity;
                     }
                 `,
@@ -668,28 +693,11 @@
             const atmosphere = new THREE.Mesh(atmosphereGeometry, atmosphereMaterial);
             earth.add(atmosphere);
 
-            // Add clouds layer
-            const cloudsGeometry = new THREE.SphereGeometry(51, 64, 64);
-            const cloudsMaterial = new THREE.MeshPhongMaterial({
-                color: 0xffffff,
-                transparent: true,
-                opacity: 0.15,
-                side: THREE.FrontSide
-            });
-            const clouds = new THREE.Mesh(cloudsGeometry, cloudsMaterial);
-            earth.add(clouds);
-
-            // Rotate clouds slowly
-            function animateClouds() {
-                clouds.rotation.y += 0.0002;
-            }
-            setInterval(animateClouds, 16);
-
-            // Add grid lines with better styling
+            // Add grid lines (subtle)
             const gridMaterial = new THREE.LineBasicMaterial({
-                color: 0x88ccff,  // Light blue grid
+                color: 0x88ccff,
                 transparent: true,
-                opacity: 0.4
+                opacity: 0.25
             });
 
             // Latitude lines
@@ -791,8 +799,11 @@
         }
 
         function createEarthquakeMarkers() {
+            // Remove old markers and labels
             earthquakes.forEach(eq => earth.remove(eq));
             earthquakes = [];
+            earthquakeLabels.forEach(label => earth.remove(label));
+            earthquakeLabels = [];
 
             const now = Date.now();
 
@@ -833,6 +844,18 @@
                 marker.add(glow);
 
                 marker.userData = eq;
+
+                // Add 3D text label with location info
+                const labelDiv = document.createElement('div');
+                labelDiv.className = 'earthquake-label';
+                labelDiv.textContent = `${eq.magnitude.toFixed(1)} - ${eq.place}`;
+
+                const label = new CSS2DObject(labelDiv);
+                const labelPos = latLonToVector3(eq.lat, eq.lon, 50.5 + size + 2);
+                label.position.copy(labelPos);
+
+                earth.add(label);
+                earthquakeLabels.push(label);
 
                 earth.add(marker);
                 earthquakes.push(marker);
@@ -942,6 +965,7 @@
 
             controls.update();
             renderer.render(scene, camera);
+            labelRenderer.render(scene, camera);
         }
 
         let touchStartTime = 0;
@@ -1031,6 +1055,7 @@
             camera.aspect = container.clientWidth / container.clientHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(container.clientWidth, container.clientHeight);
+            labelRenderer.setSize(container.clientWidth, container.clientHeight);
         }
 
         function setupUI() {
