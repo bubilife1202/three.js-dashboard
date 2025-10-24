@@ -1187,6 +1187,9 @@
                 const labelPos = latLonToVector3(eq.lat, eq.lon, 50.5 + size + 8);
                 sprite.position.copy(labelPos);
 
+                // Add earthquake data to sprite for click detection
+                sprite.userData = eq;
+
                 earth.add(sprite);
                 earthquakeLabels.push(sprite);
 
@@ -1374,7 +1377,10 @@
             mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
             raycaster.setFromCamera(mouse, camera);
-            const intersects = raycaster.intersectObjects(earthquakes);
+
+            // Check both earthquake markers and labels
+            const allClickable = [...earthquakes, ...earthquakeLabels];
+            const intersects = raycaster.intersectObjects(allClickable);
 
             if (intersects.length > 0) {
                 const eq = intersects[0].object.userData;
