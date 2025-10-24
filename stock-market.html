@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌌 Global Stock Market Wave Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            background: linear-gradient(to bottom, #0a0a1a, #000005);
+            color: #ffffff;
+        }
+
+        #container {
+            display: flex;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #controlPanel {
+            width: 320px;
+            background: rgba(10, 10, 26, 0.9);
+            backdrop-filter: blur(10px);
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        #canvas-container {
+            flex: 1;
+            position: relative;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        h1 {
+            font-size: 18px;
+            margin-bottom: 20px;
+            color: #00CED1;
+            text-shadow: 0 0 10px rgba(0, 206, 209, 0.5);
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #9370DB;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .market-btn {
+            width: 100%;
+            padding: 12px;
+            margin: 5px 0;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+
+        .market-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: #00CED1;
+            transform: translateX(5px);
+        }
+
+        .market-btn.active {
+            background: rgba(0, 206, 209, 0.2);
+            border-color: #00CED1;
+            box-shadow: 0 0 15px rgba(0, 206, 209, 0.3);
+        }
+
+        .index-item {
+            padding: 10px;
+            margin: 5px 0;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 5px;
+            border-left: 3px solid;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .index-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+            transform: translateX(3px);
+        }
+
+        .index-name {
+            font-weight: bold;
+            font-size: 13px;
+        }
+
+        .index-value {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
+        .index-change {
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .positive {
+            color: #00FF00;
+            border-left-color: #00FF00;
+        }
+
+        .negative {
+            color: #FF4500;
+            border-left-color: #FF4500;
+        }
+
+        .stock-item {
+            padding: 8px;
+            margin: 5px 0;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 5px;
+            font-size: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .stock-name {
+            font-weight: bold;
+        }
+
+        .stock-change {
+            font-weight: bold;
+            font-size: 11px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .control-btn {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(147, 112, 219, 0.3);
+            color: white;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: all 0.3s;
+            font-size: 12px;
+        }
+
+        .control-btn:hover {
+            background: rgba(147, 112, 219, 0.5);
+            box-shadow: 0 0 10px rgba(147, 112, 219, 0.5);
+        }
+
+        #tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 5px;
+            pointer-events: none;
+            display: none;
+            z-index: 1000;
+            font-size: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .tooltip-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+
+        .tooltip-value {
+            font-size: 11px;
+            opacity: 0.8;
+        }
+
+        /* Scrollbar styling */
+        #controlPanel::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #controlPanel::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        #controlPanel::-webkit-scrollbar-thumb {
+            background: rgba(147, 112, 219, 0.5);
+            border-radius: 3px;
+        }
+
+        .flag {
+            margin-right: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="controlPanel">
+            <h1>🌌 Global Stock Market Wave Dashboard</h1>
+
+            <div class="section">
+                <div class="section-title">Markets</div>
+                <button class="market-btn active" data-market="us"><span class="flag">🇺🇸</span> US Market</button>
+                <button class="market-btn active" data-market="kr"><span class="flag">🇰🇷</span> Korea Market</button>
+            </div>
+
+            <div class="section">
+                <div class="section-title">Indices</div>
+                <div id="indexList"></div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">Top Movers (Oct 24, 2025)</div>
+                <div id="topMovers"></div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">YTD Top Performers</div>
+                <div id="ytdPerformers"></div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">Controls</div>
+                <div class="controls">
+                    <button class="control-btn" id="pauseBtn">Pause</button>
+                    <button class="control-btn" id="resetBtn">Reset</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="canvas-container">
+            <div id="tooltip"></div>
+        </div>
+    </div>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // Market Data (Updated: October 24, 2025)
+        const marketData = {
+            us: {
+                indices: [
+                    { name: 'S&P 500', value: 6738.44, change: 0.58, color: '#00CED1' },
+                    { name: 'NASDAQ', value: 22941.80, change: 0.89, color: '#1E90FF' },
+                    { name: 'DOW JONES', value: 46734.61, change: 0.31, color: '#4169E1' }
+                ],
+                topMovers: [
+                    { name: 'Iris Energy (IREN)', change: 15.8 },
+                    { name: 'Robinhood (HOOD)', change: 12.4 },
+                    { name: 'Hims & Hers (HIMS)', change: 11.2 },
+                    { name: 'Palantir (PLTR)', change: 8.9 },
+                    { name: 'D-Wave (QBTS)', change: 7.5 }
+                ],
+                ytdTop: [
+                    { name: 'Iris Energy (IREN)', change: 293.0 },
+                    { name: 'Nebius Group (NBIS)', change: 259.0 },
+                    { name: 'Robinhood (HOOD)', change: 235.0 },
+                    { name: 'D-Wave Quantum (QBTS)', change: 220.0 },
+                    { name: 'Jumia Tech (JMIA)', change: 204.0 },
+                    { name: 'Palantir (PLTR)', change: 107.21 },
+                    { name: 'Newmont (NEM)', change: 102.02 }
+                ]
+            },
+            kr: {
+                indices: [
+                    { name: 'KOSPI', value: 3929, change: 2.16, color: '#9370DB' },
+                    { name: 'KOSDAQ', value: 879.15, change: 0.76, color: '#BA55D3' }
+                ],
+                topMovers: [
+                    { name: 'SK하이닉스', change: 3.8, value: 'AI 반도체' },
+                    { name: '삼성전자', change: 2.4, value: 'HBM 수주' },
+                    { name: 'HD현대일렉트릭', change: 5.2, value: '전력장비' },
+                    { name: 'LS ELECTRIC', change: 4.1, value: '전력인프라' },
+                    { name: '삼성SDI', change: 3.3, value: '배터리' }
+                ],
+                ytdTop: [
+                    { name: 'SK하이닉스', change: 145.0 },
+                    { name: 'HD현대일렉트릭', change: 98.0 },
+                    { name: 'LS ELECTRIC', change: 87.0 },
+                    { name: '삼성SDI', change: 62.0 },
+                    { name: '삼성전자', change: 45.0 }
+                ]
+            }
+        };
+
+        // Scene setup
+        let scene, camera, renderer, controls;
+        let nebulas = [];
+        let stars = [];
+        let isPaused = false;
+        let animationTime = 0;
+        let raycaster, mouse;
+        let activeMarkets = new Set(['us', 'kr']);
+
+        function init() {
+            // Scene
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x000005, 0.001);
+
+            // Camera
+            const container = document.getElementById('canvas-container');
+            camera = new THREE.PerspectiveCamera(
+                75,
+                container.clientWidth / container.clientHeight,
+                0.1,
+                1000
+            );
+            camera.position.set(0, 50, 100);
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            container.appendChild(renderer.domElement);
+
+            // Controls
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.maxDistance = 300;
+            controls.minDistance = 30;
+
+            // Raycaster for mouse interaction
+            raycaster = new THREE.Raycaster();
+            mouse = new THREE.Vector2();
+
+            // Background stars
+            createBackgroundStars();
+
+            // Create nebulas and stars
+            createNebulas();
+            createStars();
+
+            // Lights
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
+            scene.add(ambientLight);
+
+            const pointLight = new THREE.PointLight(0xffffff, 1, 500);
+            pointLight.position.set(0, 0, 0);
+            scene.add(pointLight);
+
+            // Event listeners
+            window.addEventListener('resize', onWindowResize);
+            renderer.domElement.addEventListener('mousemove', onMouseMove);
+            renderer.domElement.addEventListener('click', onClick);
+
+            // UI setup
+            setupUI();
+
+            // Animation loop
+            animate();
+        }
+
+        function createBackgroundStars() {
+            const starsGeometry = new THREE.BufferGeometry();
+            const starsMaterial = new THREE.PointsMaterial({
+                color: 0xffffff,
+                size: 0.7,
+                transparent: true,
+                opacity: 0.8
+            });
+
+            const starsVertices = [];
+            for (let i = 0; i < 5000; i++) {
+                const x = (Math.random() - 0.5) * 2000;
+                const y = (Math.random() - 0.5) * 2000;
+                const z = (Math.random() - 0.5) * 2000;
+                starsVertices.push(x, y, z);
+            }
+
+            starsGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starsVertices, 3));
+            const starField = new THREE.Points(starsGeometry, starsMaterial);
+            scene.add(starField);
+        }
+
+        function createNebulas() {
+            let xOffset = -80;
+
+            // US Market Nebulas
+            marketData.us.indices.forEach((index, i) => {
+                const nebula = createNebula(index, xOffset, 0, i);
+                nebula.userData.market = 'us';
+                nebulas.push(nebula);
+                xOffset += 60;
+            });
+
+            xOffset = -50;
+
+            // Korea Market Nebulas
+            marketData.kr.indices.forEach((index, i) => {
+                const nebula = createNebula(index, xOffset, -60, i + 3);
+                nebula.userData.market = 'kr';
+                nebulas.push(nebula);
+                xOffset += 60;
+            });
+        }
+
+        function createNebula(indexData, x, z, id) {
+            const group = new THREE.Group();
+            group.position.set(x, 0, z);
+            group.userData = { ...indexData, id, type: 'nebula' };
+
+            // Nebula cloud (particle system)
+            const particleCount = 5000; // Increased for denser nebula
+            const geometry = new THREE.BufferGeometry();
+            const positions = [];
+            const colors = [];
+            const sizes = [];
+
+            const color = new THREE.Color(indexData.color);
+            const baseSize = 18 * (1 + Math.abs(indexData.change) / 8); // Larger nebula
+
+            for (let i = 0; i < particleCount; i++) {
+                // Create layered spherical distribution for nebula effect
+                const layer = Math.random();
+                const radius = Math.pow(Math.random(), 0.7) * baseSize * (0.5 + layer * 0.5);
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.random() * Math.PI;
+
+                positions.push(
+                    radius * Math.sin(phi) * Math.cos(theta),
+                    radius * Math.sin(phi) * Math.sin(theta),
+                    radius * Math.cos(phi)
+                );
+
+                // Enhanced color variation with gradient
+                const colorVariation = color.clone();
+                colorVariation.offsetHSL(
+                    (Math.random() - 0.5) * 0.1,
+                    (Math.random() - 0.5) * 0.3,
+                    (Math.random() - 0.5) * 0.4 + layer * 0.2
+                );
+                colors.push(colorVariation.r, colorVariation.g, colorVariation.b);
+
+                sizes.push(Math.random() * 3 + 0.3);
+            }
+
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+            geometry.setAttribute('size', new THREE.Float32BufferAttribute(sizes, 1));
+
+            // Enhanced shader material for glow effect
+            const material = new THREE.ShaderMaterial({
+                uniforms: {
+                    time: { value: 0 },
+                    pulseIntensity: { value: Math.abs(indexData.change) / 1.5 }
+                },
+                vertexShader: `
+                    attribute float size;
+                    attribute vec3 color;
+                    varying vec3 vColor;
+                    varying float vAlpha;
+                    uniform float time;
+                    uniform float pulseIntensity;
+
+                    void main() {
+                        vColor = color;
+                        vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+
+                        // Enhanced pulsing wave effect
+                        float wave1 = sin(time * 2.0 + length(position) * 0.15) * 0.3;
+                        float wave2 = sin(time * 3.0 - length(position) * 0.08) * 0.2;
+                        float pulse = 1.0 + (wave1 + wave2) * pulseIntensity;
+
+                        // Depth-based alpha for nebula depth
+                        vAlpha = 1.0 - (length(position) / 20.0) * 0.3;
+
+                        gl_PointSize = size * pulse * (350.0 / -mvPosition.z);
+                        gl_Position = projectionMatrix * mvPosition;
+                    }
+                `,
+                fragmentShader: `
+                    varying vec3 vColor;
+                    varying float vAlpha;
+
+                    void main() {
+                        float dist = length(gl_PointCoord - vec2(0.5));
+                        if (dist > 0.5) discard;
+
+                        float alpha = 1.0 - (dist * 2.0);
+                        alpha = pow(alpha, 1.5);
+
+                        gl_FragColor = vec4(vColor, alpha * vAlpha * 0.7);
+                    }
+                `,
+                transparent: true,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false
+            });
+
+            const particles = new THREE.Points(geometry, material);
+            group.add(particles);
+            group.userData.particles = particles;
+
+            // Enhanced core glow with multiple layers
+            const coreGeometry = new THREE.SphereGeometry(baseSize * 0.25, 32, 32);
+            const coreMaterial = new THREE.MeshBasicMaterial({
+                color: indexData.color,
+                transparent: true,
+                opacity: 0.4,
+                blending: THREE.AdditiveBlending
+            });
+            const core = new THREE.Mesh(coreGeometry, coreMaterial);
+            group.add(core);
+            group.userData.core = core;
+
+            // Outer glow sphere
+            const glowGeometry = new THREE.SphereGeometry(baseSize * 0.35, 32, 32);
+            const glowMaterial = new THREE.MeshBasicMaterial({
+                color: indexData.color,
+                transparent: true,
+                opacity: 0.15,
+                blending: THREE.AdditiveBlending
+            });
+            const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+            group.add(glow);
+            group.userData.glow = glow;
+
+            // Multiple wave rings for enhanced wave effect
+            group.userData.rings = [];
+            for (let i = 0; i < 3; i++) {
+                const ringGeometry = new THREE.RingGeometry(baseSize * 0.5, baseSize * 0.52, 64);
+                const ringMaterial = new THREE.MeshBasicMaterial({
+                    color: indexData.color,
+                    transparent: true,
+                    opacity: 0.6,
+                    side: THREE.DoubleSide,
+                    blending: THREE.AdditiveBlending
+                });
+                const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+                ring.rotation.x = Math.PI / 2;
+                group.add(ring);
+                group.userData.rings.push({ mesh: ring, offset: i * 0.33 });
+            }
+
+            scene.add(group);
+            return group;
+        }
+
+        function createStars() {
+            const allStocks = [
+                ...marketData.us.topMovers.map(s => ({ ...s, market: 'us' })),
+                ...marketData.us.ytdTop.map(s => ({ ...s, market: 'us', ytd: true })),
+                ...marketData.kr.topMovers.map(s => ({ ...s, market: 'kr' })),
+                ...marketData.kr.ytdTop.map(s => ({ ...s, market: 'kr', ytd: true }))
+            ];
+
+            allStocks.forEach((stock, index) => {
+                const star = createStar(stock, index);
+                stars.push(star);
+            });
+        }
+
+        function createStar(stockData, index) {
+            // Find parent nebula based on market
+            const marketNebulas = nebulas.filter(n => n.userData.market === stockData.market);
+            const parentNebula = marketNebulas[Math.floor(Math.random() * marketNebulas.length)];
+
+            const group = new THREE.Group();
+
+            // Star appearance - size based on change magnitude
+            const changeAbs = Math.abs(stockData.change);
+            const size = 0.4 + changeAbs / 40;
+            const geometry = new THREE.SphereGeometry(size, 20, 20);
+
+            // Enhanced color scheme
+            let color;
+            if (stockData.change > 0) {
+                // Green to yellow-green gradient based on performance
+                const hue = 0.25 + Math.min(changeAbs / 500, 0.15);
+                const lightness = 0.5 + Math.min(changeAbs / 400, 0.2);
+                color = new THREE.Color().setHSL(hue, 1, lightness);
+            } else {
+                // Red to orange gradient for negative
+                const hue = 0.0 + Math.min(changeAbs / 300, 0.08);
+                color = new THREE.Color().setHSL(hue, 1, 0.5);
+            }
+
+            const material = new THREE.MeshBasicMaterial({
+                color: color,
+                transparent: true,
+                opacity: 0.95
+            });
+
+            const sphere = new THREE.Mesh(geometry, material);
+            group.add(sphere);
+
+            // Enhanced multi-layer glow effect
+            const glowGeometry1 = new THREE.SphereGeometry(size * 1.8, 16, 16);
+            const glowMaterial1 = new THREE.MeshBasicMaterial({
+                color: color,
+                transparent: true,
+                opacity: 0.4,
+                blending: THREE.AdditiveBlending
+            });
+            const glow1 = new THREE.Mesh(glowGeometry1, glowMaterial1);
+            group.add(glow1);
+
+            const glowGeometry2 = new THREE.SphereGeometry(size * 2.5, 16, 16);
+            const glowMaterial2 = new THREE.MeshBasicMaterial({
+                color: color,
+                transparent: true,
+                opacity: 0.15,
+                blending: THREE.AdditiveBlending
+            });
+            const glow2 = new THREE.Mesh(glowGeometry2, glowMaterial2);
+            group.add(glow2);
+
+            // Trail effect for high performers
+            if (changeAbs > 50) {
+                const trailGeometry = new THREE.BufferGeometry();
+                const trailPoints = [];
+                for (let i = 0; i < 20; i++) {
+                    trailPoints.push(0, 0, -i * 0.3);
+                }
+                trailGeometry.setAttribute('position', new THREE.Float32BufferAttribute(trailPoints, 3));
+                const trailMaterial = new THREE.PointsMaterial({
+                    color: color,
+                    size: size * 0.5,
+                    transparent: true,
+                    opacity: 0.3,
+                    blending: THREE.AdditiveBlending
+                });
+                const trail = new THREE.Points(trailGeometry, trailMaterial);
+                group.add(trail);
+                group.userData.trail = trail;
+            }
+
+            // Orbital parameters
+            const orbitRadius = 22 + Math.random() * 18;
+            const orbitSpeed = (0.15 + Math.random() * 0.25) * (stockData.change > 0 ? 1 : -0.8);
+            const orbitTilt = Math.random() * Math.PI / 3;
+            const orbitPhase = Math.random() * Math.PI * 2;
+
+            group.userData = {
+                ...stockData,
+                type: 'star',
+                parentNebula: parentNebula,
+                orbitRadius,
+                orbitSpeed,
+                orbitTilt,
+                orbitPhase,
+                baseColor: color,
+                sphere: sphere,
+                glows: [glow1, glow2]
+            };
+
+            scene.add(group);
+            return group;
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (!isPaused) {
+                animationTime += 0.016;
+
+                // Animate nebulas
+                nebulas.forEach((nebula, i) => {
+                    if (!activeMarkets.has(nebula.userData.market)) {
+                        nebula.visible = false;
+                        return;
+                    }
+                    nebula.visible = true;
+
+                    // Rotate nebula slowly
+                    nebula.rotation.y += 0.002;
+
+                    // Enhanced pulse effect
+                    const scale = 1 + Math.sin(animationTime * 2 + i) * 0.08;
+                    if (nebula.userData.core) {
+                        nebula.userData.core.scale.set(scale, scale, scale);
+                    }
+                    if (nebula.userData.glow) {
+                        const glowScale = scale * 1.1;
+                        nebula.userData.glow.scale.set(glowScale, glowScale, glowScale);
+                    }
+
+                    // Update shader time
+                    if (nebula.userData.particles) {
+                        nebula.userData.particles.material.uniforms.time.value = animationTime;
+                    }
+
+                    // Multiple wave rings
+                    if (nebula.userData.rings) {
+                        nebula.userData.rings.forEach((ringData, idx) => {
+                            const ring = ringData.mesh;
+                            const offset = ringData.offset;
+                            const phase = (animationTime * 0.4 + offset) % 1;
+                            const ringScale = 1 + phase * 2;
+                            ring.scale.set(ringScale, ringScale, 1);
+                            ring.material.opacity = 0.6 * (1 - phase);
+                        });
+                    }
+                });
+
+                // Animate stars (orbit around nebulas)
+                stars.forEach((star, idx) => {
+                    if (!activeMarkets.has(star.userData.market)) {
+                        star.visible = false;
+                        return;
+                    }
+                    star.visible = true;
+
+                    const parent = star.userData.parentNebula;
+                    if (!parent) return;
+
+                    const angle = animationTime * star.userData.orbitSpeed + star.userData.orbitPhase;
+                    const radius = star.userData.orbitRadius;
+
+                    star.position.x = parent.position.x + Math.cos(angle) * radius;
+                    star.position.y = Math.sin(angle) * radius * Math.sin(star.userData.orbitTilt);
+                    star.position.z = parent.position.z + Math.sin(angle) * radius * Math.cos(star.userData.orbitTilt);
+
+                    // Enhanced rotation and twinkle
+                    star.rotation.y += 0.03;
+                    star.rotation.z += 0.01;
+
+                    // Pulsing glow effect
+                    if (star.userData.glows) {
+                        const pulse = 1.0 + Math.sin(animationTime * 3 + idx * 0.5) * 0.2;
+                        star.userData.glows.forEach((glow, i) => {
+                            const glowPulse = pulse * (1 + i * 0.1);
+                            glow.scale.set(glowPulse, glowPulse, glowPulse);
+                        });
+                    }
+
+                    // Brightness variation for twinkle
+                    if (star.userData.sphere) {
+                        const brightness = 0.85 + Math.sin(animationTime * 4 + idx) * 0.15;
+                        star.userData.sphere.material.opacity = brightness;
+                    }
+                });
+            }
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        function onMouseMove(event) {
+            const rect = renderer.domElement.getBoundingClientRect();
+            mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+
+            const allObjects = [...nebulas, ...stars];
+            const intersects = raycaster.intersectObjects(allObjects, true);
+
+            const tooltip = document.getElementById('tooltip');
+
+            if (intersects.length > 0) {
+                let object = intersects[0].object;
+                while (object.parent && !object.userData.type) {
+                    object = object.parent;
+                }
+
+                if (object.userData && object.userData.type) {
+                    const data = object.userData;
+                    tooltip.style.display = 'block';
+                    tooltip.style.left = event.clientX + 10 + 'px';
+                    tooltip.style.top = event.clientY + 10 + 'px';
+
+                    if (data.type === 'nebula') {
+                        tooltip.innerHTML = `
+                            <div class="tooltip-name">${data.name}</div>
+                            <div class="tooltip-value">Value: ${data.value.toLocaleString()}</div>
+                            <div class="tooltip-value ${data.change >= 0 ? 'positive' : 'negative'}">
+                                Change: ${data.change >= 0 ? '+' : ''}${data.change}%
+                            </div>
+                        `;
+                    } else if (data.type === 'star') {
+                        tooltip.innerHTML = `
+                            <div class="tooltip-name">${data.name}</div>
+                            <div class="tooltip-value ${data.change >= 0 ? 'positive' : 'negative'}">
+                                ${data.change >= 0 ? '+' : ''}${data.change.toFixed(2)}%
+                            </div>
+                            ${data.value ? `<div class="tooltip-value">${data.value}</div>` : ''}
+                        `;
+                    }
+
+                    renderer.domElement.style.cursor = 'pointer';
+                } else {
+                    tooltip.style.display = 'none';
+                    renderer.domElement.style.cursor = 'default';
+                }
+            } else {
+                tooltip.style.display = 'none';
+                renderer.domElement.style.cursor = 'default';
+            }
+        }
+
+        function onClick(event) {
+            const rect = renderer.domElement.getBoundingClientRect();
+            mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+
+            const allObjects = [...nebulas, ...stars];
+            const intersects = raycaster.intersectObjects(allObjects, true);
+
+            if (intersects.length > 0) {
+                let object = intersects[0].object;
+                while (object.parent && !object.userData.type) {
+                    object = object.parent;
+                }
+
+                if (object.userData && object.userData.type === 'nebula') {
+                    // Focus camera on nebula
+                    const targetPos = object.position.clone();
+                    const distance = 40;
+                    const newCameraPos = new THREE.Vector3(
+                        targetPos.x,
+                        targetPos.y + distance * 0.5,
+                        targetPos.z + distance
+                    );
+
+                    // Smooth camera transition
+                    gsap.to(camera.position, {
+                        duration: 1.5,
+                        x: newCameraPos.x,
+                        y: newCameraPos.y,
+                        z: newCameraPos.z,
+                        onUpdate: () => {
+                            camera.lookAt(targetPos);
+                        }
+                    });
+                }
+            }
+        }
+
+        function onWindowResize() {
+            const container = document.getElementById('canvas-container');
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        }
+
+        function setupUI() {
+            // Populate index list
+            const indexList = document.getElementById('indexList');
+            [...marketData.us.indices, ...marketData.kr.indices].forEach(index => {
+                const item = document.createElement('div');
+                item.className = `index-item ${index.change >= 0 ? 'positive' : 'negative'}`;
+                item.innerHTML = `
+                    <div class="index-name">${index.name}</div>
+                    <div class="index-value">${index.value.toLocaleString()}</div>
+                    <div class="index-change">${index.change >= 0 ? '+' : ''}${index.change}%</div>
+                `;
+                indexList.appendChild(item);
+            });
+
+            // Populate top movers
+            const topMovers = document.getElementById('topMovers');
+            [...marketData.us.topMovers.slice(0, 5), ...marketData.kr.topMovers.slice(0, 3)].forEach(stock => {
+                const item = document.createElement('div');
+                item.className = 'stock-item';
+                item.innerHTML = `
+                    <span class="stock-name">${stock.name}</span>
+                    <span class="stock-change ${stock.change >= 0 ? 'positive' : 'negative'}">
+                        ${stock.change >= 0 ? '+' : ''}${stock.change}%
+                    </span>
+                `;
+                topMovers.appendChild(item);
+            });
+
+            // Populate YTD performers
+            const ytdPerformers = document.getElementById('ytdPerformers');
+            [...marketData.us.ytdTop.slice(0, 3), ...marketData.kr.ytdTop.slice(0, 2)].forEach(stock => {
+                const item = document.createElement('div');
+                item.className = 'stock-item';
+                item.innerHTML = `
+                    <span class="stock-name">${stock.name}</span>
+                    <span class="stock-change positive">+${stock.change}%</span>
+                `;
+                ytdPerformers.appendChild(item);
+            });
+
+            // Market filter buttons
+            document.querySelectorAll('.market-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const market = this.dataset.market;
+                    if (activeMarkets.has(market)) {
+                        activeMarkets.delete(market);
+                        this.classList.remove('active');
+                    } else {
+                        activeMarkets.add(market);
+                        this.classList.add('active');
+                    }
+                });
+            });
+
+            // Pause button
+            document.getElementById('pauseBtn').addEventListener('click', function() {
+                isPaused = !isPaused;
+                this.textContent = isPaused ? 'Resume' : 'Pause';
+            });
+
+            // Reset button
+            document.getElementById('resetBtn').addEventListener('click', function() {
+                camera.position.set(0, 50, 100);
+                controls.reset();
+            });
+        }
+
+        // Add GSAP for smooth camera transitions (using simple fallback)
+        const gsap = {
+            to: (target, options) => {
+                const start = { ...target };
+                const duration = options.duration * 1000;
+                const startTime = Date.now();
+
+                function update() {
+                    const elapsed = Date.now() - startTime;
+                    const progress = Math.min(elapsed / duration, 1);
+                    const eased = progress < 0.5
+                        ? 2 * progress * progress
+                        : -1 + (4 - 2 * progress) * progress;
+
+                    Object.keys(options).forEach(key => {
+                        if (key !== 'duration' && key !== 'onUpdate' && typeof options[key] === 'number') {
+                            target[key] = start[key] + (options[key] - start[key]) * eased;
+                        }
+                    });
+
+                    if (options.onUpdate) options.onUpdate();
+
+                    if (progress < 1) {
+                        requestAnimationFrame(update);
+                    }
+                }
+
+                update();
+            }
+        };
+
+        // Initialize
+        init();
+    </script>
+</body>
+</html>
