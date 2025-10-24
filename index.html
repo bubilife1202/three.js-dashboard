@@ -547,12 +547,17 @@
             mouse = new THREE.Vector2();
 
             // Lights
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
             scene.add(ambientLight);
 
-            const pointLight = new THREE.PointLight(0xffffff, 1.5, 300);
+            const pointLight = new THREE.PointLight(0xffffff, 2.0, 400);
             pointLight.position.set(100, 100, 100);
             scene.add(pointLight);
+
+            // Add secondary light for better visibility
+            const secondaryLight = new THREE.PointLight(0x6ab89a, 1.0, 300);
+            secondaryLight.position.set(-100, -50, 100);
+            scene.add(secondaryLight);
 
             // Create Earth
             createEarth();
@@ -586,11 +591,12 @@
             const geometry = new THREE.SphereGeometry(50, 64, 64);
 
             const material = new THREE.MeshPhongMaterial({
-                color: 0x1a4d2e,
-                emissive: 0x0a1f16,
-                shininess: 5,
+                color: 0x2e8b57,  // Brighter green
+                emissive: 0x1a4d2e,  // Increased self-illumination
+                emissiveIntensity: 0.3,
+                shininess: 10,
                 transparent: true,
-                opacity: 0.9
+                opacity: 1.0
             });
 
             earth = new THREE.Mesh(geometry, material);
@@ -601,7 +607,7 @@
             const atmosphereMaterial = new THREE.MeshPhongMaterial({
                 color: 0x4a90e2,
                 transparent: true,
-                opacity: 0.1,
+                opacity: 0.3,  // More visible atmosphere
                 side: THREE.BackSide
             });
             const atmosphere = new THREE.Mesh(atmosphereGeometry, atmosphereMaterial);
@@ -609,9 +615,9 @@
 
             // Add grid lines
             const gridMaterial = new THREE.LineBasicMaterial({
-                color: 0x3a7a5a,
+                color: 0x6ab89a,  // Brighter grid lines
                 transparent: true,
-                opacity: 0.3
+                opacity: 0.6  // More visible lines
             });
 
             // Latitude lines
