@@ -581,21 +581,67 @@
 
         @media (max-width: 768px) {
             #earthquakeCard {
-                padding: 20px;
-                max-width: 350px;
+                padding: 18px;
+                max-width: 320px;
+                width: 85%;
+                top: 45%;
             }
 
             .card-header {
-                font-size: 18px;
+                font-size: 17px;
+                margin-bottom: 12px;
+                padding-bottom: 8px;
             }
 
             .card-info {
+                font-size: 12px;
+            }
+
+            .card-info-item {
+                margin: 6px 0;
+            }
+
+            .card-buttons {
+                flex-direction: column;
+                gap: 8px;
+                margin-top: 15px;
+            }
+
+            .card-btn {
+                padding: 11px;
                 font-size: 13px;
+                width: 100%;
+            }
+
+            .card-close {
+                width: 28px;
+                height: 28px;
+                font-size: 16px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            #earthquakeCard {
+                padding: 15px;
+                max-width: 300px;
+                width: 88%;
+            }
+
+            .card-header {
+                font-size: 16px;
+            }
+
+            .card-info {
+                font-size: 11px;
+            }
+
+            .card-info-item {
+                margin: 5px 0;
             }
 
             .card-btn {
                 padding: 10px;
-                font-size: 13px;
+                font-size: 12px;
             }
         }
     </style>
@@ -1028,8 +1074,9 @@
 
         // Create text sprite for 3D labels
         function makeTextSprite(message, parameters = {}) {
+            const isMobile = window.innerWidth <= 768;
             const fontface = parameters.fontface || 'Arial';
-            const fontsize = parameters.fontsize || 60;
+            const fontsize = isMobile ? 45 : 60; // Smaller font on mobile
             const backgroundColor = parameters.backgroundColor || { r: 0, g: 0, b: 0, a: 0.85 };
             const borderColor = parameters.borderColor || { r: 255, g: 69, b: 0, a: 1.0 };
 
@@ -1041,8 +1088,8 @@
             const metrics = context.measureText(message);
             const textWidth = metrics.width;
 
-            const padding = 30;
-            const borderWidth = 8;
+            const padding = isMobile ? 20 : 30; // Less padding on mobile
+            const borderWidth = isMobile ? 6 : 8;
             const canvasWidth = Math.ceil(textWidth + padding * 2 + borderWidth * 2);
             const canvasHeight = Math.ceil(fontsize * 1.5 + padding + borderWidth * 2);
 
@@ -1065,7 +1112,7 @@
             context.strokeStyle = `rgba(${borderColor.r}, ${borderColor.g}, ${borderColor.b}, ${borderColor.a})`;
             context.lineWidth = borderWidth;
 
-            const radius = 12;
+            const radius = isMobile ? 8 : 12; // Smaller radius on mobile
             context.beginPath();
             const left = borderWidth;
             const top = borderWidth;
@@ -1089,9 +1136,9 @@
             // Draw text
             context.fillStyle = 'rgba(255, 255, 255, 1.0)';
             context.shadowColor = 'rgba(0, 0, 0, 0.8)';
-            context.shadowBlur = 4;
-            context.shadowOffsetX = 2;
-            context.shadowOffsetY = 2;
+            context.shadowBlur = isMobile ? 3 : 4;
+            context.shadowOffsetX = isMobile ? 1 : 2;
+            context.shadowOffsetY = isMobile ? 1 : 2;
             context.fillText(message, x, y);
 
             // Create sprite
@@ -1107,8 +1154,8 @@
 
             const sprite = new THREE.Sprite(spriteMaterial);
 
-            // Scale proportional to canvas size
-            const scale = 0.025;
+            // Scale proportional to canvas size - smaller on mobile
+            const scale = isMobile ? 0.02 : 0.025;
             sprite.scale.set(canvasWidth * scale, canvasHeight * scale, 1);
 
             return sprite;
@@ -1419,11 +1466,20 @@
             document.getElementById('cardOverlay').classList.remove('show');
         }
 
+        let resizeTimeout;
         function onWindowResize() {
             const container = document.getElementById('canvas-container');
             camera.aspect = container.clientWidth / container.clientHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(container.clientWidth, container.clientHeight);
+
+            // Recreate labels on mobile/desktop switch
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                if (earthquakeData.length > 0) {
+                    createEarthquakeMarkers();
+                }
+            }, 300);
         }
 
         function setupUI() {
