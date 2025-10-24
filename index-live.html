@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌌 Global Stock Market Wave Dashboard (Live)</title>
+    <style>
+        .update-indicator {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 206, 209, 0.2);
+            border: 1px solid rgba(0, 206, 209, 0.5);
+            padding: 10px 15px;
+            border-radius: 5px;
+            z-index: 200;
+            font-size: 12px;
+            color: #00CED1;
+        }
+
+        .update-indicator.updating {
+            background: rgba(255, 165, 0, 0.2);
+            border-color: rgba(255, 165, 0, 0.5);
+            color: #FFA500;
+        }
+
+        .update-indicator.error {
+            background: rgba(255, 69, 0, 0.2);
+            border-color: rgba(255, 69, 0, 0.5);
+            color: #FF4500;
+        }
+
+        #refreshBtn {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            border: 1px solid rgba(0, 206, 209, 0.3);
+            background: rgba(0, 206, 209, 0.1);
+            color: #00CED1;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: all 0.3s;
+        }
+
+        #refreshBtn:hover {
+            background: rgba(0, 206, 209, 0.2);
+            box-shadow: 0 0 10px rgba(0, 206, 209, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div id="update-indicator" class="update-indicator">
+        <div id="update-status">📡 Loading...</div>
+        <div id="update-time" style="font-size: 10px; opacity: 0.7; margin-top: 3px;"></div>
+    </div>
+
+    <!-- Include the original dashboard HTML here -->
+    <!-- For demo purposes, this would be the full content from index.html -->
+
+    <script>
+        // Real-time Stock Data Fetcher
+        class LiveStockData {
+            constructor() {
+                this.lastUpdate = null;
+                this.updateInterval = 5 * 60 * 1000; // 5 minutes
+                this.isUpdating = false;
+            }
+
+            async fetchYahooQuote(symbol) {
+                const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=1d`;
+
+                try {
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error('API request failed');
+
+                    const data = await response.json();
+                    const result = data.chart.result[0];
+                    const meta = result.meta;
+
+                    const current = meta.regularMarketPrice;
+                    const previous = meta.chartPreviousClose;
+                    const change = ((current - previous) / previous) * 100;
+
+                    return {
+                        value: parseFloat(current.toFixed(2)),
+                        change: parseFloat(change.toFixed(2))
+                    };
+                } catch (error) {
+                    console.warn(`Failed to fetch ${symbol}:`, error);
+                    return null;
+                }
+            }
+
+            async updateMarketData() {
+                if (this.isUpdating) return;
+
+                this.isUpdating = true;
+                this.updateUI('updating', '🔄 Updating...');
+
+                try {
+                    // Fetch US indices
+                    const usSymbols = [
+                        { symbol: '^GSPC', name: 'S&P 500', color: '#00CED1' },
+                        { symbol: '^IXIC', name: 'NASDAQ', color: '#1E90FF' },
+                        { symbol: '^DJI', name: 'DOW JONES', color: '#4169E1' }
+                    ];
+
+                    // Fetch Korea indices
+                    const krSymbols = [
+                        { symbol: '^KS11', name: 'KOSPI', color: '#9370DB' },
+                        { symbol: '^KQ11', name: 'KOSDAQ', color: '#BA55D3' }
+                    ];
+
+                    const usData = await Promise.all(
+                        usSymbols.map(async (item) => {
+                            const data = await this.fetchYahooQuote(item.symbol);
+                            if (data) {
+                                return {
+                                    name: item.name,
+                                    value: data.value,
+                                    change: data.change,
+                                    color: item.color
+                                };
+                            }
+                            return null;
+                        })
+                    );
+
+                    const krData = await Promise.all(
+                        krSymbols.map(async (item) => {
+                            const data = await this.fetchYahooQuote(item.symbol);
+                            if (data) {
+                                return {
+                                    name: item.name,
+                                    value: data.value,
+                                    change: data.change,
+                                    color: item.color
+                                };
+                            }
+                            return null;
+                        })
+                    );
+
+                    const validUSData = usData.filter(Boolean);
+                    const validKRData = krData.filter(Boolean);
+
+                    if (validUSData.length > 0 || validKRData.length > 0) {
+                        // Update global marketData
+                        if (validUSData.length > 0) {
+                            marketData.us.indices = validUSData;
+                        }
+                        if (validKRData.length > 0) {
+                            marketData.kr.indices = validKRData;
+                        }
+
+                        // Recreate nebulas with new data
+                        this.recreateNebulas();
+
+                        this.lastUpdate = new Date();
+                        this.updateUI('success', '✅ Updated', this.lastUpdate);
+
+                        console.log('✅ Market data updated successfully');
+                        console.log('US:', validUSData);
+                        console.log('KR:', validKRData);
+                    } else {
+                        throw new Error('No valid data received');
+                    }
+
+                } catch (error) {
+                    console.error('❌ Update failed:', error);
+                    this.updateUI('error', '❌ Update failed');
+                } finally {
+                    this.isUpdating = false;
+                }
+            }
+
+            recreateNebulas() {
+                // Remove old nebulas from scene
+                nebulas.forEach(nebula => {
+                    scene.remove(nebula);
+                });
+                nebulas = [];
+
+                // Recreate with new data
+                createNebulas();
+
+                // Update UI
+                updateIndexList();
+            }
+
+            updateUI(state, message, time = null) {
+                const indicator = document.getElementById('update-indicator');
+                const status = document.getElementById('update-status');
+                const timeEl = document.getElementById('update-time');
+
+                indicator.className = `update-indicator ${state === 'success' ? '' : state}`;
+                status.textContent = message;
+
+                if (time) {
+                    timeEl.textContent = `Last updated: ${time.toLocaleTimeString()}`;
+                }
+            }
+
+            startAutoUpdate() {
+                // Initial update
+                this.updateMarketData();
+
+                // Set interval for periodic updates
+                setInterval(() => {
+                    this.updateMarketData();
+                }, this.updateInterval);
+
+                console.log(`🤖 Auto-update enabled (every ${this.updateInterval / 1000 / 60} minutes)`);
+            }
+        }
+
+        // Initialize live data fetcher
+        const liveData = new LiveStockData();
+
+        // Add manual refresh button
+        window.addEventListener('DOMContentLoaded', () => {
+            const controlSection = document.querySelector('.section:last-child');
+            if (controlSection) {
+                const refreshBtn = document.createElement('button');
+                refreshBtn.id = 'refreshBtn';
+                refreshBtn.textContent = '🔄 Refresh Data';
+                refreshBtn.onclick = () => liveData.updateMarketData();
+                controlSection.appendChild(refreshBtn);
+            }
+
+            // Start auto-update after 5 seconds
+            setTimeout(() => {
+                liveData.startAutoUpdate();
+            }, 5000);
+        });
+
+        function updateIndexList() {
+            const indexList = document.getElementById('indexList');
+            indexList.innerHTML = '';
+
+            [...marketData.us.indices, ...marketData.kr.indices].forEach(index => {
+                const item = document.createElement('div');
+                item.className = `index-item ${index.change >= 0 ? 'positive' : 'negative'}`;
+                item.innerHTML = `
+                    <div class="index-name">${index.name}</div>
+                    <div class="index-value">${index.value.toLocaleString()}</div>
+                    <div class="index-change">${index.change >= 0 ? '+' : ''}${index.change}%</div>
+                `;
+                indexList.appendChild(item);
+            });
+        }
+    </script>
+
+    <!--
+        Note: This is a template file showing the live update functionality.
+        To use this, copy the entire content from index.html and add the above scripts.
+
+        The key changes:
+        1. Add LiveStockData class
+        2. Add update indicator UI
+        3. Add refresh button
+        4. Auto-update every 5 minutes
+        5. Manual refresh capability
+    -->
+</body>
+</html>
