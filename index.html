@@ -988,7 +988,7 @@
         function setupUI() {
             // Mobile menu toggle
             const menuToggle = document.getElementById('menuToggle');
-            const closePanel = document.getElementById('closePanel');
+            const closePanelBtn = document.getElementById('closePanel');
             const controlPanel = document.getElementById('controlPanel');
 
             function openPanel() {
@@ -1000,7 +1000,7 @@
             }
 
             menuToggle.addEventListener('click', openPanel);
-            closePanel.addEventListener('click', closePanel);
+            closePanelBtn.addEventListener('click', closePanel);
 
             // Close panel when clicking outside on mobile
             document.getElementById('canvas-container').addEventListener('click', (e) => {
