@@ -582,18 +582,23 @@
                 raycaster = new THREE.Raycaster();
                 mouse = new THREE.Vector2();
 
-                // Lights
-                const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+                // Lights - Enhanced for better continent visibility
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
                 scene.add(ambientLight);
 
-                const pointLight = new THREE.PointLight(0xffffff, 2.0, 400);
-                pointLight.position.set(100, 100, 100);
-                scene.add(pointLight);
+                const sunLight = new THREE.DirectionalLight(0xffffff, 1.5);
+                sunLight.position.set(100, 50, 100);
+                scene.add(sunLight);
 
-                // Add secondary light for better visibility
-                const secondaryLight = new THREE.PointLight(0x6ab89a, 1.0, 300);
-                secondaryLight.position.set(-100, -50, 100);
-                scene.add(secondaryLight);
+                // Add secondary light for shadow detail
+                const fillLight = new THREE.DirectionalLight(0xffffff, 0.5);
+                fillLight.position.set(-100, -50, -50);
+                scene.add(fillLight);
+
+                // Rim light for edge definition
+                const rimLight = new THREE.PointLight(0x88bbff, 0.8, 400);
+                rimLight.position.set(0, 100, -100);
+                scene.add(rimLight);
 
                 console.log('✅ Lights added');
 
@@ -650,14 +655,40 @@
                 (err) => { console.error('❌ Failed to load Earth texture:', err); }
             );
 
+            // Load bump map for continent boundaries
+            const bumpTexture = textureLoader.load(
+                'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/planets/earth_normal_2048.jpg',
+                () => { console.log('✅ Bump map loaded'); }
+            );
+
+            // Load specular map (water reflection)
+            const specularTexture = textureLoader.load(
+                'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/planets/earth_specular_2048.jpg',
+                () => { console.log('✅ Specular map loaded'); }
+            );
+
             const material = new THREE.MeshPhongMaterial({
                 map: earthTexture,
-                shininess: 15,
-                specular: 0x333333,
+                bumpMap: bumpTexture,
+                bumpScale: 0.3,
+                specularMap: specularTexture,
+                specular: new THREE.Color(0x666666),
+                shininess: 25,
             });
 
             earth = new THREE.Mesh(geometry, material);
             scene.add(earth);
+
+            // Add continent boundary lines layer
+            const boundaryGeometry = new THREE.SphereGeometry(50.2, 64, 64);
+            const boundaryMaterial = new THREE.MeshBasicMaterial({
+                color: 0xffffff,
+                transparent: true,
+                opacity: 0,
+                wireframe: false
+            });
+            const boundaryLayer = new THREE.Mesh(boundaryGeometry, boundaryMaterial);
+            earth.add(boundaryLayer);
 
             // Add outer atmosphere glow
             const atmosphereGeometry = new THREE.SphereGeometry(52.5, 64, 64);
@@ -684,11 +715,12 @@
             const atmosphere = new THREE.Mesh(atmosphereGeometry, atmosphereMaterial);
             earth.add(atmosphere);
 
-            // Add grid lines (subtle)
+            // Add grid lines with stronger continent boundaries
             const gridMaterial = new THREE.LineBasicMaterial({
-                color: 0x88ccff,
+                color: 0xaaddff,
                 transparent: true,
-                opacity: 0.25
+                opacity: 0.4,
+                linewidth: 2
             });
 
             // Latitude lines
