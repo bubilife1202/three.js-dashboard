@@ -524,12 +524,11 @@
     <script type="module">
         import * as THREE from 'three';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-        import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 
         console.log('🚀 Script loaded, THREE:', THREE);
 
         // Scene setup
-        let scene, camera, renderer, labelRenderer, controls;
+        let scene, camera, renderer, controls;
         let earth, earthquakes = [];
         let isPaused = false;
         let animationTime = 0;
@@ -564,14 +563,6 @@
                 renderer.setSize(container.clientWidth, container.clientHeight);
                 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
                 container.appendChild(renderer.domElement);
-
-                // Label renderer for 3D text
-                labelRenderer = new CSS2DRenderer();
-                labelRenderer.setSize(container.clientWidth, container.clientHeight);
-                labelRenderer.domElement.style.position = 'absolute';
-                labelRenderer.domElement.style.top = '0px';
-                labelRenderer.domElement.style.pointerEvents = 'none';
-                container.appendChild(labelRenderer.domElement);
 
                 console.log('✅ Renderer created and added to DOM');
 
@@ -798,6 +789,73 @@
             }
         }
 
+        // Create text sprite for 3D labels
+        function makeTextSprite(message, parameters = {}) {
+            const fontface = parameters.fontface || 'Arial';
+            const fontsize = parameters.fontsize || 70;
+            const backgroundColor = parameters.backgroundColor || { r: 0, g: 0, b: 0, a: 0.8 };
+            const borderColor = parameters.borderColor || { r: 255, g: 69, b: 0, a: 1.0 };
+
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+
+            // Set canvas size
+            canvas.width = 1024;
+            canvas.height = 256;
+
+            context.font = `Bold ${fontsize}px ${fontface}`;
+            context.textAlign = 'center';
+            context.textBaseline = 'middle';
+
+            // Background
+            context.fillStyle = `rgba(${backgroundColor.r}, ${backgroundColor.g}, ${backgroundColor.b}, ${backgroundColor.a})`;
+            context.strokeStyle = `rgba(${borderColor.r}, ${borderColor.g}, ${borderColor.b}, ${borderColor.a})`;
+            context.lineWidth = 10;
+
+            const textWidth = context.measureText(message).width;
+            const padding = 40;
+            const boxWidth = textWidth + padding * 2;
+            const boxHeight = fontsize + padding;
+            const x = canvas.width / 2;
+            const y = canvas.height / 2;
+
+            // Draw rounded rectangle
+            context.beginPath();
+            const radius = 15;
+            context.moveTo(x - boxWidth/2 + radius, y - boxHeight/2);
+            context.lineTo(x + boxWidth/2 - radius, y - boxHeight/2);
+            context.quadraticCurveTo(x + boxWidth/2, y - boxHeight/2, x + boxWidth/2, y - boxHeight/2 + radius);
+            context.lineTo(x + boxWidth/2, y + boxHeight/2 - radius);
+            context.quadraticCurveTo(x + boxWidth/2, y + boxHeight/2, x + boxWidth/2 - radius, y + boxHeight/2);
+            context.lineTo(x - boxWidth/2 + radius, y + boxHeight/2);
+            context.quadraticCurveTo(x - boxWidth/2, y + boxHeight/2, x - boxWidth/2, y + boxHeight/2 - radius);
+            context.lineTo(x - boxWidth/2, y - boxHeight/2 + radius);
+            context.quadraticCurveTo(x - boxWidth/2, y - boxHeight/2, x - boxWidth/2 + radius, y - boxHeight/2);
+            context.closePath();
+            context.fill();
+            context.stroke();
+
+            // Text
+            context.fillStyle = 'rgba(255, 255, 255, 1.0)';
+            context.fillText(message, x, y);
+
+            // Create sprite
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.needsUpdate = true;
+
+            const spriteMaterial = new THREE.SpriteMaterial({
+                map: texture,
+                transparent: true,
+                depthTest: false,
+                depthWrite: false
+            });
+
+            const sprite = new THREE.Sprite(spriteMaterial);
+            sprite.scale.set(20, 5, 1);
+
+            return sprite;
+        }
+
         function createEarthquakeMarkers() {
             // Remove old markers and labels
             earthquakes.forEach(eq => earth.remove(eq));
@@ -845,21 +903,22 @@
 
                 marker.userData = eq;
 
-                // Add 3D text label with location info
-                const labelDiv = document.createElement('div');
-                labelDiv.className = 'earthquake-label';
-                labelDiv.textContent = `${eq.magnitude.toFixed(1)} - ${eq.place}`;
+                // Add 3D text sprite label
+                const labelText = `${eq.magnitude.toFixed(1)} - ${eq.place}`;
+                const sprite = makeTextSprite(labelText);
 
-                const label = new CSS2DObject(labelDiv);
-                const labelPos = latLonToVector3(eq.lat, eq.lon, 50.5 + size + 2);
-                label.position.copy(labelPos);
+                // Position label above the marker
+                const labelPos = latLonToVector3(eq.lat, eq.lon, 50.5 + size + 8);
+                sprite.position.copy(labelPos);
 
-                earth.add(label);
-                earthquakeLabels.push(label);
+                earth.add(sprite);
+                earthquakeLabels.push(sprite);
 
                 earth.add(marker);
                 earthquakes.push(marker);
             });
+
+            console.log(`✅ Created ${earthquakes.length} earthquake markers with labels`);
         }
 
         function updateStatistics() {
@@ -965,7 +1024,6 @@
 
             controls.update();
             renderer.render(scene, camera);
-            labelRenderer.render(scene, camera);
         }
 
         let touchStartTime = 0;
@@ -1055,7 +1113,6 @@
             camera.aspect = container.clientWidth / container.clientHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(container.clientWidth, container.clientHeight);
-            labelRenderer.setSize(container.clientWidth, container.clientHeight);
         }
 
         function setupUI() {
