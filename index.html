@@ -616,34 +616,80 @@
         function createEarth() {
             const geometry = new THREE.SphereGeometry(50, 64, 64);
 
+            // Beautiful Earth with ocean blue and land green
             const material = new THREE.MeshPhongMaterial({
-                color: 0x2e8b57,  // Brighter green
-                emissive: 0x1a4d2e,  // Increased self-illumination
-                emissiveIntensity: 0.3,
-                shininess: 10,
-                transparent: true,
+                color: 0x1e90ff,  // Deep sky blue for oceans
+                emissive: 0x0d47a1,  // Blue glow
+                emissiveIntensity: 0.2,
+                shininess: 25,
+                specular: 0x4fc3f7,  // Water reflection
+                transparent: false,
                 opacity: 1.0
             });
 
             earth = new THREE.Mesh(geometry, material);
             scene.add(earth);
 
-            // Add atmosphere glow
-            const atmosphereGeometry = new THREE.SphereGeometry(52, 64, 64);
-            const atmosphereMaterial = new THREE.MeshPhongMaterial({
-                color: 0x4a90e2,
+            // Add land masses (simplified continents effect)
+            const landGeometry = new THREE.SphereGeometry(50.3, 64, 64);
+            const landMaterial = new THREE.MeshPhongMaterial({
+                color: 0x2d5016,  // Dark forest green
+                emissive: 0x1a3010,
+                emissiveIntensity: 0.15,
                 transparent: true,
-                opacity: 0.3,  // More visible atmosphere
-                side: THREE.BackSide
+                opacity: 0.85,
+                side: THREE.FrontSide
+            });
+            const landLayer = new THREE.Mesh(landGeometry, landMaterial);
+            earth.add(landLayer);
+
+            // Add outer atmosphere glow
+            const atmosphereGeometry = new THREE.SphereGeometry(53, 64, 64);
+            const atmosphereMaterial = new THREE.ShaderMaterial({
+                uniforms: {},
+                vertexShader: `
+                    varying vec3 vNormal;
+                    void main() {
+                        vNormal = normalize(normalMatrix * normal);
+                        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                    }
+                `,
+                fragmentShader: `
+                    varying vec3 vNormal;
+                    void main() {
+                        float intensity = pow(0.7 - dot(vNormal, vec3(0.0, 0.0, 1.0)), 2.0);
+                        gl_FragColor = vec4(0.3, 0.6, 1.0, 1.0) * intensity;
+                    }
+                `,
+                side: THREE.BackSide,
+                blending: THREE.AdditiveBlending,
+                transparent: true
             });
             const atmosphere = new THREE.Mesh(atmosphereGeometry, atmosphereMaterial);
             earth.add(atmosphere);
 
-            // Add grid lines
-            const gridMaterial = new THREE.LineBasicMaterial({
-                color: 0x6ab89a,  // Brighter grid lines
+            // Add clouds layer
+            const cloudsGeometry = new THREE.SphereGeometry(51, 64, 64);
+            const cloudsMaterial = new THREE.MeshPhongMaterial({
+                color: 0xffffff,
                 transparent: true,
-                opacity: 0.6  // More visible lines
+                opacity: 0.15,
+                side: THREE.FrontSide
+            });
+            const clouds = new THREE.Mesh(cloudsGeometry, cloudsMaterial);
+            earth.add(clouds);
+
+            // Rotate clouds slowly
+            function animateClouds() {
+                clouds.rotation.y += 0.0002;
+            }
+            setInterval(animateClouds, 16);
+
+            // Add grid lines with better styling
+            const gridMaterial = new THREE.LineBasicMaterial({
+                color: 0x88ccff,  // Light blue grid
+                transparent: true,
+                opacity: 0.4
             });
 
             // Latitude lines
@@ -826,6 +872,7 @@
                         <span style="font-weight: bold;">${eq.place}</span>
                     </div>
                     <div class="eq-time">${timeAgo} - Depth: ${eq.depth.toFixed(0)}km</div>
+                    <div class="eq-time" style="margin-top: 2px;">📍 ${eq.lat.toFixed(2)}°, ${eq.lon.toFixed(2)}°</div>
                 `;
 
                 item.onclick = () => {
@@ -946,6 +993,7 @@
                         <div class="tooltip-magnitude">규모 ${eq.magnitude.toFixed(1)}</div>
                         <div class="tooltip-info">
                             <strong>${eq.place}</strong><br>
+                            📍 위치: ${eq.lat.toFixed(2)}°, ${eq.lon.toFixed(2)}°<br>
                             깊이: ${eq.depth.toFixed(0)}km<br>
                             ${getTimeAgo(eq.time)}
                         </div>
