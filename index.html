@@ -235,7 +235,11 @@
         }
 
         .side-panel.collapsed {
-            transform: translateY(-50%) translateX(calc(100% + var(--spacing-md)));
+            transform: translateY(-50%) translateX(calc(100% - 50px));
+        }
+
+        .side-panel.collapsed .panel-content {
+            display: none;
         }
 
         .panel-header {
