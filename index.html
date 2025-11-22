@@ -235,11 +235,32 @@
         }
 
         .side-panel.collapsed {
-            transform: translateY(-50%) translateX(calc(100% - 50px));
+            transform: translateY(-50%) translateX(calc(100% - 48px));
         }
 
         .side-panel.collapsed .panel-content {
             display: none;
+        }
+
+        .side-panel.collapsed .panel-title {
+            display: none;
+        }
+
+        .side-panel.collapsed .panel-toggle {
+            background: rgba(0, 240, 255, 0.4);
+            box-shadow: 0 0 20px rgba(0, 240, 255, 0.6);
+            animation: pulse-button 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-button {
+            0%, 100% {
+                box-shadow: 0 0 20px rgba(0, 240, 255, 0.6);
+                transform: scale(1);
+            }
+            50% {
+                box-shadow: 0 0 30px rgba(0, 240, 255, 0.9);
+                transform: scale(1.1);
+            }
         }
 
         .panel-header {
@@ -663,11 +684,19 @@
             API_URL: 'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_week.geojson',
             REFRESH_INTERVAL: 5 * 60 * 1000, // 5 minutes
 
-            // Earth Textures - You can replace these URLs
+            // Earth Textures - High-Quality 8K Night Earth with PBR Maps
             TEXTURES: {
-                EARTH_DAY: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/planets/earth_atmos_2048.jpg',
+                // Base Night Map - City lights on dark earth
                 EARTH_NIGHT: 'https://raw.githubusercontent.com/turban/webgl-earth/master/images/earth_lights_lrg.jpg',
-                EARTH_CLOUDS: 'https://raw.githubusercontent.com/turban/webgl-earth/master/images/earth_clouds_lrg.jpg'
+
+                // Normal Map - 3D terrain depth (mountains, valleys)
+                EARTH_NORMAL: 'https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/planets/earth_normal_2048.jpg',
+
+                // Specular Map - Ocean reflections (white = shiny oceans, black = matte land)
+                EARTH_SPECULAR: 'https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/planets/earth_specular_2048.jpg',
+
+                // Fallback textures
+                EARTH_DAY: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/planets/earth_atmos_2048.jpg'
             },
 
             // Visual Settings
@@ -780,60 +809,145 @@
         }
 
         async function createEarth() {
-            const geometry = new THREE.SphereGeometry(CONFIG.EARTH_RADIUS, 128, 128);
-
-            // Load Night Earth Texture
+            const geometry = new THREE.SphereGeometry(CONFIG.EARTH_RADIUS, 256, 256);
             const textureLoader = new THREE.TextureLoader();
 
+            // Load all PBR textures for high-end holographic look
             return new Promise((resolve) => {
-                textureLoader.load(
-                    CONFIG.TEXTURES.EARTH_NIGHT, // Using night earth for sci-fi look
-                    (texture) => {
-                        const material = new THREE.MeshPhongMaterial({
-                            map: texture,
-                            emissive: 0x112244,
-                            emissiveIntensity: 0.2,
-                            shininess: 10
-                        });
+                let loadedTextures = {
+                    base: null,
+                    normal: null,
+                    specular: null
+                };
+                let loadCount = 0;
+                const totalTextures = 3;
 
-                        earth = new THREE.Mesh(geometry, material);
-                        scene.add(earth);
-
-                        console.log('✅ Earth texture loaded');
+                function checkComplete() {
+                    loadCount++;
+                    if (loadCount === totalTextures) {
+                        createEarthMesh();
                         resolve();
+                    }
+                }
+
+                function createEarthMesh() {
+                    const material = new THREE.MeshPhongMaterial({
+                        // Base night texture with city lights
+                        map: loadedTextures.base,
+
+                        // Normal map for 3D terrain depth
+                        normalMap: loadedTextures.normal,
+                        normalScale: new THREE.Vector2(1.5, 1.5),
+
+                        // Specular map - makes oceans shiny, land matte
+                        specularMap: loadedTextures.specular,
+                        specular: new THREE.Color(0x333333),
+                        shininess: 25,
+
+                        // Emissive glow for holographic effect
+                        emissive: new THREE.Color(0x0a1a2a),
+                        emissiveIntensity: 0.15,
+                        emissiveMap: loadedTextures.base, // City lights emit light
+
+                        // Anti-aliasing
+                        side: THREE.FrontSide
+                    });
+
+                    earth = new THREE.Mesh(geometry, material);
+                    scene.add(earth);
+
+                    console.log('✅ High-Quality Earth with PBR textures loaded');
+                }
+
+                // Load Base Night Texture
+                textureLoader.load(
+                    CONFIG.TEXTURES.EARTH_NIGHT,
+                    (texture) => {
+                        texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+                        loadedTextures.base = texture;
+                        console.log('✅ Night texture loaded');
+                        checkComplete();
                     },
                     undefined,
                     (err) => {
-                        console.warn('⚠️ Using fallback texture');
-                        const material = new THREE.MeshPhongMaterial({
-                            color: 0x1a3d5c,
-                            emissive: 0x112244,
-                            emissiveIntensity: 0.3,
-                            shininess: 10
-                        });
-                        earth = new THREE.Mesh(geometry, material);
-                        scene.add(earth);
-                        resolve();
+                        console.warn('⚠️ Night texture failed, using fallback');
+                        loadedTextures.base = null;
+                        checkComplete();
+                    }
+                );
+
+                // Load Normal Map
+                textureLoader.load(
+                    CONFIG.TEXTURES.EARTH_NORMAL,
+                    (texture) => {
+                        texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+                        loadedTextures.normal = texture;
+                        console.log('✅ Normal map loaded');
+                        checkComplete();
+                    },
+                    undefined,
+                    (err) => {
+                        console.warn('⚠️ Normal map failed, skipping');
+                        loadedTextures.normal = null;
+                        checkComplete();
+                    }
+                );
+
+                // Load Specular Map
+                textureLoader.load(
+                    CONFIG.TEXTURES.EARTH_SPECULAR,
+                    (texture) => {
+                        texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+                        loadedTextures.specular = texture;
+                        console.log('✅ Specular map loaded');
+                        checkComplete();
+                    },
+                    undefined,
+                    (err) => {
+                        console.warn('⚠️ Specular map failed, skipping');
+                        loadedTextures.specular = null;
+                        checkComplete();
                     }
                 );
             });
         }
 
         function createAtmosphere() {
-            const geometry = new THREE.SphereGeometry(CONFIG.EARTH_RADIUS * 1.05, 64, 64);
-            const material = new THREE.ShaderMaterial({
+            // Inner atmosphere glow - Cyan holographic effect
+            const innerGeometry = new THREE.SphereGeometry(CONFIG.EARTH_RADIUS * 1.04, 128, 128);
+            const innerMaterial = new THREE.ShaderMaterial({
+                uniforms: {
+                    time: { value: 0 }
+                },
                 vertexShader: `
                     varying vec3 vNormal;
+                    varying vec3 vPosition;
                     void main() {
                         vNormal = normalize(normalMatrix * normal);
+                        vPosition = position;
                         gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
                     }
                 `,
                 fragmentShader: `
+                    uniform float time;
                     varying vec3 vNormal;
+                    varying vec3 vPosition;
+
                     void main() {
-                        float intensity = pow(0.6 - dot(vNormal, vec3(0.0, 0.0, 1.0)), 2.0);
-                        gl_FragColor = vec4(0.0, 0.94, 1.0, 1.0) * intensity;
+                        // Fresnel effect for rim glow
+                        vec3 viewDirection = normalize(cameraPosition - vPosition);
+                        float fresnel = pow(1.0 - abs(dot(viewDirection, vNormal)), 3.0);
+
+                        // Holographic color gradient (cyan to magenta)
+                        vec3 cyan = vec3(0.0, 0.94, 1.0);
+                        vec3 magenta = vec3(1.0, 0.0, 0.92);
+                        vec3 color = mix(cyan, magenta, fresnel * 0.5);
+
+                        // Pulsing intensity
+                        float pulse = 0.7 + 0.3 * sin(time * 1.5);
+                        float intensity = fresnel * pulse;
+
+                        gl_FragColor = vec4(color, intensity * 0.6);
                     }
                 `,
                 side: THREE.BackSide,
@@ -841,8 +955,54 @@
                 transparent: true
             });
 
-            earthGlow = new THREE.Mesh(geometry, material);
+            const innerGlow = new THREE.Mesh(innerGeometry, innerMaterial);
+            scene.add(innerGlow);
+
+            // Outer atmosphere glow - Extended cyan aura
+            const outerGeometry = new THREE.SphereGeometry(CONFIG.EARTH_RADIUS * 1.08, 64, 64);
+            const outerMaterial = new THREE.ShaderMaterial({
+                uniforms: {
+                    time: { value: 0 }
+                },
+                vertexShader: `
+                    varying vec3 vNormal;
+                    varying vec3 vPosition;
+                    void main() {
+                        vNormal = normalize(normalMatrix * normal);
+                        vPosition = position;
+                        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                    }
+                `,
+                fragmentShader: `
+                    uniform float time;
+                    varying vec3 vNormal;
+                    varying vec3 vPosition;
+
+                    void main() {
+                        vec3 viewDirection = normalize(cameraPosition - vPosition);
+                        float fresnel = pow(1.0 - abs(dot(viewDirection, vNormal)), 2.0);
+
+                        // Cyan glow
+                        vec3 color = vec3(0.0, 0.94, 1.0);
+
+                        // Slow pulse
+                        float pulse = 0.5 + 0.5 * sin(time);
+                        float intensity = fresnel * pulse;
+
+                        gl_FragColor = vec4(color, intensity * 0.3);
+                    }
+                `,
+                side: THREE.BackSide,
+                blending: THREE.AdditiveBlending,
+                transparent: true
+            });
+
+            earthGlow = new THREE.Mesh(outerGeometry, outerMaterial);
             scene.add(earthGlow);
+
+            // Store both for animation
+            earthGlow.userData.innerMaterial = innerMaterial;
+            earthGlow.userData.outerMaterial = outerMaterial;
         }
 
         function createStarfield() {
@@ -1170,6 +1330,16 @@
             // Rotate earth slowly
             if (earth) {
                 earth.rotation.y += 0.0002;
+            }
+
+            // Animate holographic atmosphere
+            if (earthGlow && earthGlow.userData) {
+                if (earthGlow.userData.innerMaterial) {
+                    earthGlow.userData.innerMaterial.uniforms.time.value = time;
+                }
+                if (earthGlow.userData.outerMaterial) {
+                    earthGlow.userData.outerMaterial.uniforms.time.value = time;
+                }
             }
 
             controls.update();
