@@ -545,10 +545,15 @@
             EARTH_RADIUS: 50,
             CAMERA_DISTANCE: 150,
 
-            // Clean vector-style colors (no textures)
+            // High-quality Earth textures
+            TEXTURES: {
+                EARTH_MAP: 'https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/planets/earth_atmos_2048.jpg',
+                NORMAL_MAP: 'https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/planets/earth_normal_2048.jpg',
+                SPECULAR_MAP: 'https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/planets/earth_specular_2048.jpg'
+            },
+
+            // Marker colors
             COLORS: {
-                OCEAN: 0x0b0f19,      // Deep Navy
-                LAND: 0x1e293b,       // Slate Blue
                 ATMOSPHERE: 0x3b82f6, // Neon Blue
                 MINOR: 0x14b8a6,      // Teal
                 MODERATE: 0xf97316,   // Orange
@@ -574,7 +579,8 @@
             setupRenderer();
             setupLights();
             setupControls();
-            createEarth();
+
+            await createEarth();
             createAtmosphere();
 
             await fetchEarthquakeData();
@@ -588,7 +594,7 @@
 
         function setupScene() {
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(CONFIG.COLORS.OCEAN);
+            scene.background = new THREE.Color(0x0b0f19); // Deep navy background
         }
 
         function setupCamera() {
@@ -614,12 +620,24 @@
         }
 
         function setupLights() {
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            // Ambient light for overall illumination
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
             scene.add(ambientLight);
 
-            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-            directionalLight.position.set(100, 50, 50);
-            scene.add(directionalLight);
+            // Main directional light (Sun) - creates realistic day/night effect
+            const sunLight = new THREE.DirectionalLight(0xffffff, 1.2);
+            sunLight.position.set(100, 50, 50);
+            scene.add(sunLight);
+
+            // Rim light for depth and definition
+            const rimLight = new THREE.DirectionalLight(0x4488ff, 0.3);
+            rimLight.position.set(-100, 0, -50);
+            scene.add(rimLight);
+
+            // Fill light to reduce harsh shadows
+            const fillLight = new THREE.DirectionalLight(0xffffff, 0.2);
+            fillLight.position.set(0, -50, 0);
+            scene.add(fillLight);
         }
 
         function setupControls() {
@@ -634,21 +652,101 @@
             controls.enablePan = false;
         }
 
-        /* ========== CLEAN VECTOR-STYLE GLOBE ========== */
-        function createEarth() {
-            const geometry = new THREE.SphereGeometry(CONFIG.EARTH_RADIUS, 64, 64);
+        /* ========== REALISTIC EARTH WITH CONTINENTS ========== */
+        async function createEarth() {
+            const geometry = new THREE.SphereGeometry(CONFIG.EARTH_RADIUS, 128, 128);
+            const textureLoader = new THREE.TextureLoader();
 
-            // Simple, clean material - no textures
-            const material = new THREE.MeshPhongMaterial({
-                color: CONFIG.COLORS.LAND,
-                emissive: CONFIG.COLORS.OCEAN,
-                emissiveIntensity: 0.1,
-                shininess: 5,
-                flatShading: false
+            return new Promise((resolve) => {
+                let loadedTextures = {
+                    map: null,
+                    normalMap: null,
+                    specularMap: null
+                };
+                let loadCount = 0;
+                const totalTextures = 3;
+
+                function checkComplete() {
+                    loadCount++;
+                    if (loadCount === totalTextures) {
+                        createEarthMesh();
+                        resolve();
+                    }
+                }
+
+                function createEarthMesh() {
+                    const material = new THREE.MeshPhongMaterial({
+                        // Main texture - shows continents and oceans
+                        map: loadedTextures.map,
+
+                        // Normal map - adds terrain depth (mountains, valleys)
+                        normalMap: loadedTextures.normalMap,
+                        normalScale: new THREE.Vector2(2.0, 2.0),
+
+                        // Specular map - makes oceans shiny, land matte
+                        specularMap: loadedTextures.specularMap,
+                        specular: new THREE.Color(0x444444),
+                        shininess: 20,
+
+                        // Subtle ambient glow
+                        emissive: new THREE.Color(0x0a0a0a),
+                        emissiveIntensity: 0.05
+                    });
+
+                    earth = new THREE.Mesh(geometry, material);
+                    scene.add(earth);
+
+                    console.log('✅ High-quality Earth with continents loaded');
+                }
+
+                // Load Earth texture
+                textureLoader.load(
+                    CONFIG.TEXTURES.EARTH_MAP,
+                    (texture) => {
+                        texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+                        loadedTextures.map = texture;
+                        console.log('✅ Earth texture loaded');
+                        checkComplete();
+                    },
+                    undefined,
+                    (err) => {
+                        console.warn('⚠️ Earth texture failed');
+                        checkComplete();
+                    }
+                );
+
+                // Load Normal map
+                textureLoader.load(
+                    CONFIG.TEXTURES.NORMAL_MAP,
+                    (texture) => {
+                        texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+                        loadedTextures.normalMap = texture;
+                        console.log('✅ Normal map loaded');
+                        checkComplete();
+                    },
+                    undefined,
+                    (err) => {
+                        console.warn('⚠️ Normal map failed');
+                        checkComplete();
+                    }
+                );
+
+                // Load Specular map
+                textureLoader.load(
+                    CONFIG.TEXTURES.SPECULAR_MAP,
+                    (texture) => {
+                        texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+                        loadedTextures.specularMap = texture;
+                        console.log('✅ Specular map loaded');
+                        checkComplete();
+                    },
+                    undefined,
+                    (err) => {
+                        console.warn('⚠️ Specular map failed');
+                        checkComplete();
+                    }
+                );
             });
-
-            earth = new THREE.Mesh(geometry, material);
-            scene.add(earth);
         }
 
         function createAtmosphere() {
